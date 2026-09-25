@@ -58,8 +58,9 @@ Measured from the OpenRouter account balance before and after each run, not from
 |---|---|
 | 60 attacks generated and run against the target (attacker + target, no judge) | $0.031 |
 | Judging 80 cases | ~$0.365 (~$0.0046 per judged case) |
+| Full scan of 129 attacks: attacker, target, judge and panel escalations (independent holdout) | $0.86 (~$0.0067 per attack, all-in) |
 
-A default scan (60 attacks, each judged) comes to about **$0.31**, estimated from the two measured components above. That is roughly 30 scans on a US$10 key. A process-wide spend cap (`PROMPTRED_SPEND_CAP_USD`) is checked before every call.
+At the measured all-in rate, a default scan (60 attacks) comes to about **$0.40**, roughly 25 scans on a US$10 key. The judge is about 70% of that bill. A process-wide spend cap (`PROMPTRED_SPEND_CAP_USD`) is checked before every call.
 
 ## Running it
 
