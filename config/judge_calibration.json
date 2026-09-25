@@ -1,0 +1,11 @@
+{
+  "threshold": 0.82,
+  "guaranteed_risk": 0.07919781050002478,
+  "target_risk": 0.1,
+  "confidence_level": 0.95,
+  "calibration_n": 58,
+  "calibration_errors": 1,
+  "calibration_coverage": 0.90625,
+  "calibrated_at": "2026-09-09T15:09:10.847097+00:00",
+  "source_path": "data\\ground_truth\\real_judge_eval_results.jsonl"
+}

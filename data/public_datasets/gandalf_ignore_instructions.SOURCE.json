@@ -1,0 +1,17 @@
+{
+  "source": "https://huggingface.co/datasets/Lakera/gandalf_ignore_instructions",
+  "revision_sha": "04737b65e90a6794ec227012e4a255a7def6344b",
+  "license": "MIT",
+  "paper": "arXiv:2501.07927",
+  "fetched_at": "2026-09-23T04:58:14.009537+00:00",
+  "rows": 1000,
+  "splits": {
+    "train": 777,
+    "validation": 111,
+    "test": 112
+  },
+  "fields": {
+    "text": "real prompt submitted to Lakera's Gandalf game (July 2023), filtered by Lakera as an 'ignore instructions' injection",
+    "similarity": "Lakera's embedding similarity to 'Ignore all previous instructions'"
+  }
+}

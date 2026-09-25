@@ -1,0 +1,13 @@
+.env
+.venv
+
+# Personal local-machine notes - not for version control.
+HOW_TO_RUN.md
+
+# Local-only / never commit
+llm-sentinel/
+.claude/
+tmp/
+__pycache__/
+*.pyc
+.pytest_cache/

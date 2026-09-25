@@ -1,0 +1,46 @@
+version: "1.0"
+
+description: >
+  Curated OpenRouter free-tier models suitable for each PromptRed role.
+  All entries here end in ":free" and are always costed at $0 by the
+  token tracker. Pick a different model per role to preserve judge
+  independence - do not point ATTACKER_MODEL, TARGET_MODEL, and
+  JUDGE_MODEL at the same entry.
+
+  Last verified against GET https://openrouter.ai/api/v1/models on
+  2026-09-08. OpenRouter's free-tier catalog turns over frequently -
+  models get promoted to paid-only or deprecated with little notice.
+  The 2026-08-31 recommendations (z-ai/glm-5.2:free,
+  minimax/minimax-m3:free, minimax/minimax-m2.7:free) were ALL gone
+  from the live catalog by this re-check, confirming the "re-verify
+  before trusting this file" warning is not hypothetical. If a listed
+  model 404s with "unavailable for free", re-query the models endpoint
+  (filter for ids ending in ":free") and update this file and .env to
+  match.
+
+roles:
+
+  attacker:
+    recommended: "google/gemma-4-31b-it:free"
+    alternatives:
+      - "inclusionai/ling-3.0-flash-fin:free"
+      - "dots-studio/dots-3-note-preview:free"
+
+  target:
+    recommended: "liquid/lfm-2.5-2.6b:free"
+    alternatives:
+      - "google/gemma-4-26b-a4b-it:free"
+      - "poolside/laguna-s-2.1:free"
+
+  judge:
+    recommended: "nvidia/nemotron-3-super-120b-a12b:free"
+    alternatives:
+      - "nvidia/nemotron-3-ultra-550b-a55b:free"
+      - "cohere/north-mini-code:free"
+
+notes: >
+  Keeping attacker/target/judge on different model families (not just
+  different sizes of the same family) gives the strongest independence
+  guarantee - the current recommendations span three distinct
+  providers (Z.AI/GLM, Google Gemma, NVIDIA Nemotron) for exactly this
+  reason.

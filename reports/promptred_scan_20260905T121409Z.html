@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PromptRed Scan Report</title>
+<style>
+body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; padding: 2rem; background: #f8fafc; color: #1e293b; }
+header h1 { margin-bottom: 0.25rem; }
+.meta { color: #64748b; font-size: 0.9rem; }
+section { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.stat-grid { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+.stat { text-align: center; }
+.stat-value { display: block; font-size: 2rem; font-weight: 700; }
+.stat-label { font-size: 0.85rem; color: #64748b; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.independence { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: 600; }
+.independence.ok { background: #dcfce7; color: #166534; }
+.independence.warn { background: #fef3c7; color: #92400e; }
+.finding { border-left: 4px solid #6b7280; padding: 1rem; margin-bottom: 1rem; background: #f8fafc; border-radius: 4px; }
+.finding-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
+.badge { color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.category { font-weight: 600; }
+.pattern { font-size: 0.75rem; color: #64748b; font-family: monospace; background: #e2e8f0; padding: 0.1rem 0.4rem; border-radius: 3px; }
+.severity { text-transform: uppercase; font-size: 0.75rem; color: #64748b; }
+.source { font-size: 0.75rem; color: #94a3b8; margin-left: auto; }
+.turn { padding: 0.4rem 0; border-bottom: 1px dashed #e2e8f0; }
+.turn.user { color: #b91c1c; }
+.turn.assistant { color: #1e40af; }
+.rca, .remediation, .reasoning { margin-top: 0.75rem; font-size: 0.9rem; }
+ul { margin: 0.25rem 0; padding-left: 1.25rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>PromptRed Scan Report</h1>
+  <p class="meta">Generated 2026-09-05T12:14:09.298794+00:00</p>
+</header>
+<div class="independence ok">Judge model is independent from attacker/target models.</div>
+
+<section class="summary">
+  <h2>Executive Summary</h2>
+  <div class="stat-grid">
+    <div class="stat"><span class="stat-value">0</span><span class="stat-label">Prompts Scanned</span></div>
+    <div class="stat"><span class="stat-value">0</span><span class="stat-label">Attacks Run</span></div>
+    <div class="stat"><span class="stat-value">0</span><span class="stat-label">Vulnerable Findings</span></div>
+    <div class="stat"><span class="stat-value">0</span><span class="stat-label">Aggregate Risk Score</span></div>
+  </div>
+  <table class="severity-table">
+    <thead><tr><th>Severity</th><th>Count</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+
+<section class="cost">
+  <h2>Token Economics</h2>
+  <table>
+    <tr><td>Total calls</td><td>0</td></tr>
+    <tr><td>Total tokens</td><td>0</td></tr>
+    <tr><td>Total cost (USD)</td><td>$0.0000</td></tr>
+  </table>
+</section>
+
+<section class="findings">
+  <h2>Findings</h2>
+  
+</section>
+</body>
+</html>

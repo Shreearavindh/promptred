@@ -1,0 +1,118 @@
+version: "2.0"
+
+description: >
+  Maps PromptRed's guardrail categories and root causes to the OWASP
+  Top 10 for LLM Applications (2026 edition, published 2026-08-04),
+  grounding findings and remediation in recognized industry guidance
+  rather than ad hoc advice.
+
+source_verification: >
+  Verified live on 2026-09-07 via web search plus direct fetches of
+  https://genai.owasp.org/llm-top-10/ and
+  https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/ (not
+  reconstructed from memory). The 2026 edition re-ranks and
+  renumbers several categories versus 2025: Excessive Agency moves
+  from LLM06:2025 to LLM03:2026, Unbounded Consumption from
+  LLM10:2025 to LLM06:2026, and "System Prompt Leakage" (LLM07:2025)
+  is renamed "Hidden Context Exposure" (LLM08:2026) with broadened
+  scope covering tool schemas, policies, roles and other
+  non-user-visible context, not just the system prompt text.
+  Improper Output Handling moves from LLM05:2025 to LLM10:2026.
+  IMPORTANT CAVEAT: as of the verification date, the live interactive
+  page at genai.owasp.org/llm-top-10/ still serves the 2025-labelled
+  taxonomy, and no individual per-risk page exists yet under the
+  2026 URL pattern (confirmed via a direct fetch of a candidate URL,
+  which 404s) - the 2026 edition is currently only published as the
+  summary/PDF resource at the URL above. Per-category `url` fields
+  below therefore point at that resource page rather than a
+  category-specific page; update them once OWASP publishes individual
+  2026 risk pages. Only the five categories relevant to PromptRed's
+  four guardrails are listed here; the full ten (also covering supply
+  chain, data/model poisoning, misinformation, vector/embedding
+  weaknesses, and unbounded consumption) are documented at the URL
+  above but aren't wired into PromptRed's remediation mapping since
+  this MVP's guardrails don't produce findings in those categories.
+
+owasp_categories:
+  LLM01:
+    name: "Prompt Injection"
+    url: "https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/"
+  LLM02:
+    name: "Sensitive Information Disclosure"
+    url: "https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/"
+  LLM03:
+    name: "Excessive Agency"
+    url: "https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/"
+  LLM08:
+    name: "Hidden Context Exposure"
+    url: "https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/"
+  LLM10:
+    name: "Improper Output Handling"
+    url: "https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/"
+
+# Primary + contributing OWASP references per guardrail category.
+guardrail_mapping:
+  system_prompt_extraction:
+    primary: LLM08
+    contributing: [LLM01]
+  unauthorized_refund:
+    primary: LLM03
+    contributing: [LLM01]
+  cross_user_data_access:
+    primary: LLM02
+    contributing: [LLM03]
+  policy_circumvention:
+    primary: LLM10
+    contributing: [LLM01]
+
+# Root-cause-specific remediation, more granular than the category
+# mapping above - this is what actually goes in the report.
+root_cause_remediation:
+
+  MISSING_INPUT_VALIDATION:
+    owasp: [LLM01]
+    steps:
+      - "Implement input classification to detect and flag adversarial prompt patterns before they reach the model."
+      - "Reject or sandbox requests that match known injection heuristics (instruction-override phrasing, encoding tricks) rather than passing them through unmodified."
+    defense_in_depth:
+      - "Rate-limit and log rejected/flagged inputs to detect probing behavior over time."
+
+  INSUFFICIENT_SYSTEM_PROMPT:
+    owasp: [LLM01, LLM08]
+    steps:
+      - "Strengthen the system prompt with explicit, enumerated prohibitions rather than general instructions - name the specific request patterns to refuse."
+      - "Use an instruction-hierarchy technique (e.g. clearly delimiting system vs. user content) so user input cannot be mistaken for new instructions."
+    defense_in_depth:
+      - "Add a canary/tripwire string to the system prompt so any leak is trivially detectable in logs."
+
+  MISSING_AUTHORIZATION_CHECK:
+    owasp: [LLM03]
+    steps:
+      - "Enforce authorization checks in the application layer, not the LLM - the model must never be the source of truth for whether an action is allowed."
+      - "Require every protected action (refund, data access) to pass through a deterministic authorization service before execution, and reject any model output that claims an action succeeded without a corresponding authorization event."
+    defense_in_depth:
+      - "Log every protected-action attempt (authorized and denied) for audit; alert on denied-then-claimed-successful mismatches."
+
+  OVER_PERMISSIVE_TOOL_ACCESS:
+    owasp: [LLM03]
+    steps:
+      - "Apply least-privilege scoping to tool/function access per role - a support agent's tools should not be reachable by a customer-role session."
+      - "Validate the acting user's permission server-side for every tool invocation, not just at session start."
+    defense_in_depth:
+      - "Periodically review which roles can invoke which tools; remove default-broad grants."
+
+  MISSING_OUTPUT_FILTER:
+    owasp: [LLM02, LLM10, LLM08]
+    steps:
+      - "Add a post-generation output filter that screens for system-prompt fragments, PII belonging to other users, and restricted-content categories before the response is returned."
+      - "Treat output filtering as a second independent layer, not a substitute for the system prompt - it should catch what the prompt fails to prevent."
+    defense_in_depth:
+      - "Sample and review a percentage of production responses for filter effectiveness over time."
+
+  CONTEXT_WINDOW_MANIPULATION:
+    owasp: [LLM01]
+    steps:
+      - "Use structured prompting with a clear instruction hierarchy so mid-conversation user text cannot be interpreted as new system-level instructions."
+      - "Add a dedicated prompt-injection classifier on the input path to catch roleplay/authority/override framing before it reaches the target model."
+    defense_in_depth:
+      - "Test system-prompt changes against a library of known manipulation techniques (see evals/suites/target_robustness_eval.py) before deploying."
