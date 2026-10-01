@@ -4,6 +4,16 @@
 
 PromptRed generates attacks against a support bot's system prompt, runs them against a controlled synthetic bot with mock business tools, decides whether a guardrail broke, and reports severity, the full transcript, and templated remediation mapped to the OWASP Top 10 for LLM Applications (2026 edition).
 
+## Documentation
+
+| Read this | For |
+|---|---|
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Persona, input, output, architecture diagram, metrics targeted vs reached |
+| [docs/PromptRed_Report.docx](docs/PromptRed_Report.docx) | The trade-off analysis report |
+| [evals/README.md](evals/README.md) | Every eval: what it measures, what was run, results, how to reproduce for free, critique |
+| [data/README.md](data/README.md) | Every dataset: where it came from and which number it produced |
+| [docs/README.md](docs/README.md) | The PRD (pre-review version) and which of its claims were superseded |
+
 ## Judge reliability
 
 A security tool is only as trustworthy as the component that decides "this broke". PromptRed reports that number:
@@ -11,7 +21,7 @@ A security tool is only as trustworthy as the component that decides "this broke
 | Measured against 80 real, hand-labelled attack/response pairs | Precision | Recall | F1 |
 |---|---|---|---|
 | **LLM judge** (`qwen/qwen3.8-27b`) | 0.762 | 0.941 | **0.842** |
-| Deterministic-only baseline (no LLM) | — | 0.353 | 0.500 |
+| Deterministic-only baseline (no LLM) | 0.857 | 0.353 | 0.500 |
 | Majority-class baseline ("never vulnerable") | — | 0.000 | 0.000 |
 
 - The 80 transcripts are **real**: produced by the live attacker model against the live target bot, then labelled by hand before the judge saw them (17 vulnerable, 63 held). See `data/ground_truth/real_labelled_cases.jsonl` and `REVIEW_real_cases.md`.

@@ -1,3 +1,7 @@
+"""Live connectivity check: makes one real OpenRouter call. Excluded from the
+offline test run (`--ignore=tests/test_llm_client.py`); needs OPENROUTER_API_KEY.
+"""
+
 from core.llm.client import LLMClient
 
 
