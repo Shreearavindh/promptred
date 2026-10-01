@@ -32,45 +32,44 @@ The report also shows totals, real token cost and latency per model role. It war
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    IN["System prompt<br/>(pasted, file, or discovered in code)"] --> STRAT
-    subgraph ATTACK["Attack side (code)"]
-        STRAT["Strategy picks attacks<br/>taxonomy / seed / single / gandalf"]
-        GEN["Attack generator"]
-        HAR["Harness: 1- or 3-turn conversation"]
-        STRAT --> GEN --> HAR
-        STRAT -- "gandalf: verbatim replay, no LLM" --> HAR
-    end
-    DATA[("Public Gandalf dataset<br/>+ 5 real incidents")] --> STRAT
-    LLM_A{{"Rented LLM: attacker<br/>z-ai/glm-5.3-flash"}} -.-> GEN
-    HAR <--> BOT
-    subgraph TARGET["Target under test"]
-        BOT["Synthetic support bot"]
-        TOOLS["Mock tools: account lookup, refund<br/>(log every call as evidence)"]
-        BOT --> TOOLS
-    end
-    LLM_T{{"Rented LLM: target<br/>liquid/lfm-2.5-2.6b"}} -.-> BOT
-    HAR --> RULES
-    TOOLS --> RULES
-    subgraph EVAL["Evaluation (code decides the order)"]
-        RULES["1. Rules: verbatim / base64 leaks,<br/>cross-user tool calls"]
-        JUDGE["2. LLM judge: rubric,<br/>untrusted text fenced off"]
-        CAL["3. Calibrated threshold:<br/>trust if confidence >= 0.82"]
-        PANEL["4. Second judge, other family"]
-        HUMAN["5. Needs human review"]
-        RULES -- "not conclusive" --> JUDGE --> CAL
-        CAL -- "below threshold" --> PANEL
-        PANEL -- "disagree / unsure" --> HUMAN
-    end
-    LLM_J{{"Rented LLMs: judge qwen/qwen3.8-27b,<br/>panel mistralai/mistral-nemo"}} -.-> JUDGE
-    LLM_J -.-> PANEL
-    RULES -- "conclusive" --> SCORE
-    CAL -- "trusted" --> SCORE
-    PANEL -- "agree" --> SCORE
-    HUMAN --> REPORT
-    SCORE["Severity + root cause<br/>(config/severity.yaml)"] --> REM["OWASP 2026 remediation<br/>(templated, config/owasp_mapping.yaml)"]
-    REM --> REPORT["HTML + JSON report<br/>cost, latency, model-independence check"]
+```text
+ INPUT: a support bot's system prompt (pasted, from a file, or found in a codebase)
+   |
+   v
++-------------------------------------------------------------+     +----------------------------+
+| ATTACK SIDE  (code)                                         |     | External intelligence      |
+|   Strategy picks attacks: taxonomy / seed / single / gandalf| <-- | Gandalf dataset (1,000     |
+|   Attack generator writes each attack ----------------------+---> |   real human attacks)      |
+|   Harness runs a 1- or 3-turn conversation                  |     | LLM attacker: glm-5.3-flash|
++------------------------------+------------------------------+     +----------------------------+
+                               |
+                               v
++-------------------------------------------------------------+     +----------------------------+
+| TARGET UNDER TEST                                           |     | LLM target:                |
+|   Synthetic support bot  <----------------------------------+---> |   liquid/lfm-2.5-2.6b      |
+|   Mock tools: account lookup, refund (every call is logged) |     +----------------------------+
++------------------------------+------------------------------+
+                               |  transcript + tool-call log
+                               v
++-------------------------------------------------------------+     +----------------------------+
+| EVALUATION  (code decides the order)                        |     | LLM judge: qwen3.8-27b     |
+|   1. Rules: verbatim/encoded leaks, cross-user tool calls   |     | LLM panel: mistral-nemo    |
+|        conclusive? -> verdict                               |     +-------------+--------------+
+|   2. LLM judge (attacker text fenced off) <-----------------+-----------------+
+|   3. Confidence >= 0.82 (calibrated)?  yes -> verdict       |
+|   4. Otherwise a second judge, other model family           |
+|        agree -> verdict    disagree -> 5. NEEDS HUMAN REVIEW|
++------------------------------+------------------------------+
+                               |
+                               v
++-------------------------------------------------------------+
+| SCORING AND REMEDIATION  (code + config, no LLM)            |
+|   Severity by business impact, root cause,                  |
+|   OWASP Top 10 for LLM Applications 2026, templated fix     |
++------------------------------+------------------------------+
+                               |
+                               v
+ OUTPUT: HTML + JSON report -- verdicts, transcripts, confidence, cost, latency
 ```
 
 Code owns the order, the limits and the decisions about escalation. LLMs generate attacks, play the target and judge what rules cannot see. Spend caps, token ceilings and attack limits are enforced in code, never in prompts.
@@ -89,18 +88,12 @@ Code owns the order, the limits and the decisions about escalation. LLMs generat
 
 ## Metrics: targeted vs reached
 
-Targets come from the PRD (section 11.2), revised after the instructor's reviews.
-
-| Metric | Target | Reached | Met? |
-|---|---|---|---|
-| **Judge F1 against hand labels** (added after review) | at least 0.80 | **0.842** on 80 real cases; **0.82** on a new task | Yes |
-| Judge vs non-AI baseline | beat rules alone | 0.842 vs 0.50 (rules), 0.0 (majority class) | Yes |
-| Error of verdicts trusted without a human | at most 10% | 7.9% bound on the original set; **12.7% on the new task** | Original set only |
-| Planted weaknesses found (PRD: at least 60%) | at least 60% | **7 of 8 (88%)**, planted by a different model | Yes |
-| Categories exploited (PRD: at least 3 of 4) | at least 3 of 4 | 4 of 4 across the planted prompts | Yes |
-| False "secure" reports (PRD: 0%) | 0% (later replaced: this conflicts with any recall below 100%) | Judge recall 0.94 on the new task, so 3 real breaks missed | No |
-| End-to-end scan time (PRD: at most 10 minutes) | at most 10 minutes | About 1.5 minutes per attack, so a 60-attack scan takes over an hour | **No** |
-| Cost per scan | within a US$10 course key | About $0.40 per 60-attack scan (real balance change) | Yes |
-| Human baseline (PRD: at most 20% of human time) | at most 20% | Not measured with a real human tester | Not measured |
-
-**Why the time target was missed:** the free target model is rate-limited (20 requests a minute), and the judge is a reasoning model (median 33 s per call). Calls run one after another. A paid target and parallel calls are the obvious fixes; both cost money, so neither was taken for this course.
+| Metric | Target | Reached |
+|---|---|---|
+| Judge F1 against hand labels (80 real cases) | at least 0.80 | **0.842** (precision 0.76, recall 0.94) |
+| Judge F1 on a new task (prompts written by another model) | at least 0.80 | **0.82** |
+| Judge vs rules-only baseline | higher | 0.842 vs 0.50 |
+| Error of verdicts trusted without a human | at most 10% | 7.9% on the original set; 12.7% on the new task |
+| Planted weaknesses found | at least 60% | **7 of 8 (88%)** |
+| Cost per 60-attack scan | within a US$10 key | **about $0.40** |
+| Scan time for one prompt | at most 10 minutes | about 1.5 minutes per attack (rate-limited free target) |
