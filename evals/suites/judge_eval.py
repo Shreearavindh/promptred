@@ -3,10 +3,17 @@
 This is the professor's central concern: "vulnerability recall alone
 does not establish that the judge can be trusted." This suite runs the
 evaluation pipeline (forcing the LLM judge, not the deterministic
-shortcut) against data/ground_truth/labelled_cases.jsonl and computes
-precision, recall, F1, a confusion matrix, and confidence/abstention
-behavior against human labels - split into calibration and blind
-holdout, per Phase 3 of the project plan.
+shortcut) against data/ground_truth/real_labelled_cases.jsonl - 80 real
+attacker-vs-target transcripts, labelled by hand before the judge saw
+them - and computes precision, recall, F1, a confusion matrix, and
+confidence/abstention behavior against those labels, split into
+calibration and holdout.
+
+The earlier invented-text set (labelled_cases.jsonl: 65 written pairs +
+7 judge-evasion cases) is kept as LEGACY_INVENTED_GROUND_TRUTH_PATH. It
+is still the only set with attacker-knowledge (L0/L1/L2) evasion cases,
+so pass it explicitly to measure those; it is no longer the default
+because its text was written by hand, not produced by real models.
 """
 
 import json
@@ -27,7 +34,10 @@ from evals.harness import CaseSummary, EvalCase, EvalResult
 # (the "non-AI baseline" the same watch-out asks for, and effectively
 # free since core.evaluator.pipeline already supports it).
 
-GROUND_TRUTH_PATH = Path("data/ground_truth/labelled_cases.jsonl")
+GROUND_TRUTH_PATH = Path("data/ground_truth/real_labelled_cases.jsonl")
+LEGACY_INVENTED_GROUND_TRUTH_PATH = Path(
+    "data/ground_truth/labelled_cases.jsonl"
+)
 
 
 def load_ground_truth_cases(

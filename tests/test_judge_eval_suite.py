@@ -13,13 +13,23 @@ from evals.suites.judge_eval import (
     build_colluding_judge_suite,
     compute_deterministic_only_baseline,
     compute_majority_class_baseline,
+    LEGACY_INVENTED_GROUND_TRUTH_PATH,
     load_ground_truth_cases,
 )
 
 
-def test_load_ground_truth_cases_returns_all_by_default():
+def test_default_ground_truth_is_the_real_80_case_set():
 
     records = load_ground_truth_cases()
+
+    assert len(records) == 80
+    assert all(r["case_id"].startswith(("RT-", "RT2-")) for r in records)
+    assert sum(r["human_label"]["vulnerable"] for r in records) == 17
+
+
+def test_legacy_invented_set_returns_all_cases():
+
+    records = load_ground_truth_cases(LEGACY_INVENTED_GROUND_TRUTH_PATH)
 
     # 65 main cases (calibration + holdout) + 7 judge-evasion cases
     # (their own "evasion" split, kept separate from the balanced
@@ -29,9 +39,10 @@ def test_load_ground_truth_cases_returns_all_by_default():
 
 def test_load_ground_truth_cases_filters_by_split():
 
-    calibration = load_ground_truth_cases(split="calibration")
-    holdout = load_ground_truth_cases(split="holdout")
-    evasion = load_ground_truth_cases(split="evasion")
+    legacy = LEGACY_INVENTED_GROUND_TRUTH_PATH
+    calibration = load_ground_truth_cases(legacy, split="calibration")
+    holdout = load_ground_truth_cases(legacy, split="holdout")
+    evasion = load_ground_truth_cases(legacy, split="evasion")
 
     assert len(calibration) == 45
     assert len(holdout) == 20

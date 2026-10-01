@@ -14,12 +14,16 @@ JudgeEvalSuite.run_case's caller). This version survives that: rerun
 it and it resumes past whatever's already in OUTPUT_PATH instead of
 re-paying for cases already judged.
 
-Does not call EvalReport.save() - this deliberately stays out of
-evals/results/judge/'s history so it isn't conflated with the existing
-invented-text-set run history.
+When every case has a cached prediction, rerunning makes no model calls
+and costs nothing: it just re-scores. The metrics summary is saved to
+evals/results/judge/<timestamp>.json, the canonical place for judge eval
+results (the CLI's cost readout reads judge recall from there). Older
+runs against the invented-text set live in
+evals/results/judge_legacy_invented_set/.
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from evals.suites.judge_eval import (
@@ -33,6 +37,7 @@ from evals.suites.judge_eval import (
 
 GROUND_TRUTH_PATH = Path("data/ground_truth/real_labelled_cases.jsonl")
 OUTPUT_PATH = Path("data/ground_truth/real_judge_eval_results.jsonl")
+RESULTS_DIR = Path("evals/results/judge")
 
 
 def _load_done() -> dict[str, dict]:
@@ -112,21 +117,25 @@ def main() -> None:
     print("\n=== judge eval (REAL ground truth) ===")
     print(json.dumps(overall, indent=2, default=str))
 
+    by_split = {}
     for split in ("calibration", "holdout"):
         split_records = [
             r for r in valid_records if r["split"] == split
         ]
         split_bucket = _bucket_from_predictions(split_records, predict)
+        by_split[split] = _confusion_rates(split_bucket)
         print(f"\n--- {split} (n={len(split_records)}) ---")
-        print(json.dumps(_confusion_rates(split_bucket), default=str))
+        print(json.dumps(by_split[split], default=str))
 
+    by_category = {}
     for cat in sorted({r["guardrail_category"] for r in valid_records}):
         cat_records = [
             r for r in valid_records if r["guardrail_category"] == cat
         ]
         cat_bucket = _bucket_from_predictions(cat_records, predict)
+        by_category[cat] = _confusion_rates(cat_bucket)
         print(f"\n--- {cat} (n={len(cat_records)}) ---")
-        print(json.dumps(_confusion_rates(cat_bucket), default=str))
+        print(json.dumps(by_category[cat], default=str))
 
     majority = compute_majority_class_baseline(records)
     deterministic = compute_deterministic_only_baseline(records)
@@ -134,6 +143,28 @@ def main() -> None:
     print("\n--- baselines ---")
     print("majority_class:", json.dumps(majority, default=str))
     print("deterministic_only:", json.dumps(deterministic, default=str))
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = RESULTS_DIR / f"{timestamp.replace(':', '-')}.json"
+    report_path.write_text(json.dumps({
+        "suite_name": "judge",
+        "timestamp": timestamp,
+        "ground_truth": str(GROUND_TRUTH_PATH),
+        "per_case_predictions": str(OUTPUT_PATH),
+        "repeats_per_case": 1,
+        "metrics": {
+            **overall,
+            "n_cases": len(records),
+            "by_split": by_split,
+            "by_category": by_category,
+            "baselines": {
+                "majority_class": majority,
+                "deterministic_only": deterministic,
+            },
+        },
+    }, indent=2, default=str), encoding="utf-8")
+    print(f"\nSaved summary: {report_path}")
 
 
 if __name__ == "__main__":

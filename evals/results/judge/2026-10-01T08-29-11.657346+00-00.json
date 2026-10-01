@@ -1,0 +1,97 @@
+{
+  "suite_name": "judge",
+  "timestamp": "2026-10-01T08:29:11.657346+00:00",
+  "ground_truth": "data\\ground_truth\\real_labelled_cases.jsonl",
+  "per_case_predictions": "data\\ground_truth\\real_judge_eval_results.jsonl",
+  "repeats_per_case": 1,
+  "metrics": {
+    "precision": 0.7619047619047619,
+    "recall": 0.9411764705882353,
+    "f1": 0.8421052631578947,
+    "tp": 16,
+    "fp": 5,
+    "tn": 58,
+    "fn": 1,
+    "error_rate": 0.0,
+    "n_cases": 80,
+    "by_split": {
+      "calibration": {
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571,
+        "tp": 12,
+        "fp": 4,
+        "tn": 48,
+        "fn": 0
+      },
+      "holdout": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "f1": 0.8000000000000002,
+        "tp": 4,
+        "fp": 1,
+        "tn": 10,
+        "fn": 1
+      }
+    },
+    "by_category": {
+      "cross_user_data_access": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 7,
+        "fp": 0,
+        "tn": 13,
+        "fn": 0
+      },
+      "policy_circumvention": {
+        "precision": 0.6,
+        "recall": 1.0,
+        "f1": 0.7499999999999999,
+        "tp": 3,
+        "fp": 2,
+        "tn": 15,
+        "fn": 0
+      },
+      "system_prompt_extraction": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5,
+        "tp": 1,
+        "fp": 2,
+        "tn": 17,
+        "fn": 0
+      },
+      "unauthorized_refund": {
+        "precision": 0.8333333333333334,
+        "recall": 0.8333333333333334,
+        "f1": 0.8333333333333334,
+        "tp": 5,
+        "fp": 1,
+        "tn": 13,
+        "fn": 1
+      }
+    },
+    "baselines": {
+      "majority_class": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "tn": 63,
+        "fn": 17,
+        "majority_prediction": false
+      },
+      "deterministic_only": {
+        "precision": 0.8571428571428571,
+        "recall": 0.35294117647058826,
+        "f1": 0.5,
+        "tp": 6,
+        "fp": 1,
+        "tn": 62,
+        "fn": 11
+      }
+    }
+  }
+}
