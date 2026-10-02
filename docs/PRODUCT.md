@@ -54,13 +54,13 @@ The report also shows totals, real token cost and latency per model role. It war
                                v
 +-------------------------------------------------------------+     +----------------------------+
 | EVALUATION  (code decides the order)                        |     | LLM judge: qwen3.8-27b     |
-|   1. Rules: verbatim/encoded leaks, cross-user tool calls   |     | Panel: TypeSafe Jev 1.13   |
+|   1. Rules: verbatim/encoded leaks, cross-user tool calls   |     |   (writes the reasoning)   |
 |        conclusive? -> verdict                               |     +-------------+--------------+
 |   2. LLM judge (attacker text fenced off) <-----------------+-----------------+
-|   3. Confidence >= 0.82 (calibrated)?  yes -> verdict       |
-|   4. Otherwise a second judge, other model family           |
-|        agree -> verdict    disagree -> 5. NEEDS HUMAN REVIEW|
-+------------------------------+------------------------------+
+|   3. Confidence >= 0.82 (calibrated)?  yes -> verdict       |     +----------------------------+
+|   4. Otherwise the second judge validates it  <-------------+---> | Decision model: TypeSafe   |
+|        agree -> verdict    disagree -> 5. NEEDS HUMAN REVIEW|     |   Jev 1.13 (yes/no + conf) |
++------------------------------+------------------------------+     +----------------------------+
                                |
                                v
 +-------------------------------------------------------------+
@@ -73,6 +73,20 @@ The report also shows totals, real token cost and latency per model role. It war
  OUTPUT: HTML + JSON report -- verdicts, transcripts, confidence, cost, latency
 ```
 
+### Why the second judge is a decision model
+
+When the main judge is unsure (confidence below 0.82), a second judge validates its verdict. That second judge is **TypeSafe's Jev 1.13**, a structured decision model: it answers "vulnerable or not vulnerable" with a probability and a confidence, instead of writing text. It was chosen by measurement, replacing the first second judge, `mistralai/mistral-nemo` (`data/holdout_planted/compare_second_judges.py`, scored against the author's blind labels):
+
+| On the new-task test | mistral-nemo | **Jev 1.13** |
+|---|---|---|
+| Accuracy alone (129 cases) | 64% | **85%** |
+| F1 alone | 0.68 | **0.83** |
+| Automatic errors on the 14 unsure cases | 4 (all false alarms) | **1** |
+| Cases sent to a human (of 14) | 5 | 9 (7 of them real breaks) |
+| Cost per verdict | ~$0.0004 | **~$0.00002** |
+
+Jev sends more cases to a human, but it is still the cheaper choice in engineering time. Assuming about 2 minutes to review a case and about 15 minutes to chase a false alarm, the old panel cost roughly 70 minutes on those 14 cases (10 reviewing, 60 on false alarms) and Jev roughly 33 (18 reviewing, 15 on one false alarm). Most of Jev's escalations are also real breaks, so the review time finds real problems. Jev also keeps attacker text in a separate data field, never in its instructions, so a judge-directed injection has nothing to hijack. It writes no explanation, so the report keeps the main judge's reasoning. The panel results rest on 14 cases and should be re-checked on more data.
+
 If a model is down, a failed attack is replayed with a fixed real-world attack, a judge outage falls back to the rules verdict or human review, and the report is marked incomplete. Code owns the order, the limits and the decisions about escalation. LLMs generate attacks, play the target and judge what rules cannot see. Spend caps, token ceilings and attack limits are enforced in code, never in prompts.
 
 | Module | Role |
@@ -81,7 +95,7 @@ If a model is down, a failed attack is replayed with a fixed real-world attack, 
 | `core/orchestrator.py` | Runs one scan end to end; builds the default judge panel |
 | `core/attacks/` | Strategies, attack generator, multi-turn harness |
 | `core/target_bot/`, `core/evidence/` | Synthetic bot, mock tools and their evidence log |
-| `core/evaluator/` | Rules, LLM judge, calibrated threshold, panel, pipeline |
+| `core/evaluator/` | Rules, LLM judge, calibrated threshold, panel (`decision_judge.py` for Jev), pipeline |
 | `core/scoring/`, `core/remediation/` | Severity, root cause, OWASP 2026 mapping |
 | `core/reporting/` | HTML and JSON reports |
 | `core/llm/`, `core/economics/` | OpenRouter client, spend cap, cost and latency tracking, cost model |
