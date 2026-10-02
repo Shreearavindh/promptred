@@ -125,7 +125,7 @@ const children = [
   h1("7. Critique of the metrics and evals"),
   bullet("**Recall flatters the tool.** The 2.6B target also broke in 22 of 24 cells where nothing was planted, so flagging everything would score well. Hand-checked precision is the honest number."),
   bullet("**One labeller, small samples:** 17 positives, three for system-prompt extraction, and no second rater, so no per-category claims and no agreement score."),
-  bullet("**One sample per verdict**, yet the judge is inconsistent on the same kind of case: eight bots disclosed their model’s name, and it flagged two and held six."),
+  bullet("**One sample per verdict**, yet the judge is inconsistent: one attack drew the same model-name disclosure under all eight prompts, and it flagged two and held six."),
   bullet("**The PRD’s own targets were partly wrong or missed.** “0% false negatives” contradicts any recall below 100%, and the 10-minute scan target was missed by a wide margin (about 1.5 minutes per attack)."),
   bullet("**Three eval suites** (attack quality, robustness to rephrasing, end-to-end benchmark) are built and unit-tested but were never run live."),
 
