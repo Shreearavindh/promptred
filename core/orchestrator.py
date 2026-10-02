@@ -322,9 +322,12 @@ class ScanOrchestrator:
             self.bot_factory = (
                 bot_factory or self._make_default_bot_factory()
             )
+            # The panel filters every judge verdict: the second judge
+            # (Jev) re-checks it; agree -> verdict, disagree -> human.
             self.pipeline = pipeline or EvaluationPipeline(
                 token_tracker=self.token_tracker,
                 escalation_panel=self._make_default_escalation_panel(),
+                validate_every_verdict=True,
             )
         self.severity_scorer = severity_scorer or SeverityScorer()
         self.rca_analyzer = rca_analyzer or RootCauseAnalyzer()
@@ -377,11 +380,15 @@ class ScanOrchestrator:
                 token_tracker=self.token_tracker,
             )
 
+        # abstention_threshold=0.0: agreement between the two judges is
+        # the gate (the user's design), not a confidence floor - the
+        # calibrated 0.82 threshold did not transfer to a new task.
         return JudgePanel(
             judges=[
                 LLMJudge(token_tracker=self.token_tracker),
                 second_judge,
             ],
+            abstention_threshold=0.0,
         )
 
     def _make_default_bot_factory(self) -> BotFactory:

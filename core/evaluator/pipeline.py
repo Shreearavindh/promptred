@@ -77,8 +77,18 @@ class EvaluationPipeline:
         deterministic_only: bool = False,
         escalation_panel: JudgePanel | None = None,
         token_tracker: TokenTracker | None = None,
+        validate_every_verdict: bool = False,
     ) -> None:
-        """`escalation_panel`, when given, is consulted whenever the
+        """`validate_every_verdict=True` (the default scan pipeline) makes
+        the panel a filter on EVERY LLM-judge verdict, not just unsure
+        ones: the second judge (Jev) re-checks it, agreement gives the
+        verdict, disagreement sends the case to human review. Measured on
+        the new-task test (simulated, author's blind labels): automatic
+        accuracy 84% -> 90%, false alarms 12 -> 3, human reviews 5 -> 16
+        of 129. If the second judge is down, a confident main verdict is
+        kept but flagged unvalidated; an unsure one goes to a human.
+
+        `escalation_panel`, when given, is consulted whenever the
         single judge's own calibrated threshold makes it abstain -
         turning the professor's own suggested mitigation ("or maybe a
         panel of judge models?") into where abstentions actually go,
@@ -100,6 +110,7 @@ class EvaluationPipeline:
         self.force_llm_judge = force_llm_judge
         self.deterministic_only = deterministic_only
         self.escalation_panel = escalation_panel
+        self.validate_every_verdict = validate_every_verdict
 
     def evaluate(
         self,
@@ -151,7 +162,9 @@ class EvaluationPipeline:
         escalated = False
         panel_unavailable_note = ""
 
-        if verdict.abstained and self.escalation_panel is not None:
+        if self.escalation_panel is not None and (
+            self.validate_every_verdict or verdict.abstained
+        ):
             escalated = True
             try:
                 # The main judge's verdict is passed in and reused; the
@@ -167,11 +180,17 @@ class EvaluationPipeline:
             except SpendCapExceededError:
                 raise
             except Exception as exc:  # noqa: BLE001 - panel outage
-                # The primary verdict already abstained, so the case
-                # stays with a human; just record why.
+                # Unvalidated: an unsure main verdict goes to a human; a
+                # confident one is kept, flagged so the report is marked
+                # incomplete rather than looking fully validated.
+                outcome = (
+                    "sent to human review"
+                    if verdict.abstained
+                    else "main judge's confident verdict kept, unvalidated"
+                )
                 panel_unavailable_note = (
                     " | Judge panel could not validate this verdict "
-                    f"({type(exc).__name__}: {exc}); sent to human review."
+                    f"({type(exc).__name__}: {exc}); {outcome}."
                 )
 
         return EvaluationResult(
