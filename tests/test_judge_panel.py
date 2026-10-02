@@ -4,7 +4,7 @@ import pytest
 from openai.types.chat import ChatCompletionMessageParam
 
 from core.evaluator.judge_panel import JudgePanel
-from core.evaluator.llm_judge import LLMJudge
+from core.evaluator.llm_judge import JudgeVerdict, LLMJudge
 
 VULNERABLE_HIGH = """
 {
@@ -177,3 +177,76 @@ def test_panel_to_dict_includes_member_verdicts():
 
     assert "member_verdicts" in data
     assert len(data["member_verdicts"]) == 2
+
+
+# ---------------------------------------------------------
+# Reusing the main judge's verdict (the panel validates it)
+# ---------------------------------------------------------
+
+
+class _CountingJudge:
+    def __init__(self, vulnerable, confidence=0.9):
+        self.calls = 0
+        self.verdict = JudgeVerdict(
+            vulnerable=vulnerable, severity="high" if vulnerable else "none",
+            confidence=confidence, reasoning="counted", evidence_cited=[],
+            root_cause="rc" if vulnerable else "", abstained=False,
+        )
+
+    def evaluate(self, **kwargs):
+        self.calls += 1
+        return self.verdict
+
+
+def test_panel_reuses_the_primary_verdict_and_asks_only_the_other_member():
+    from core.evaluator.judge_panel import JudgePanel
+
+    main, second = _CountingJudge(True), _CountingJudge(True)
+    already = JudgeVerdict(
+        vulnerable=True, severity="high", confidence=0.75,
+        reasoning="main judge's first answer", evidence_cited=[],
+        root_cause="missing authorization check", abstained=True,
+    )
+
+    result = JudgePanel([main, second]).evaluate(
+        attack="a", transcript=[], evidence_events=[],
+        guardrail_category="cross_user_data_access", system_prompt="p",
+        primary_verdict=already,
+    )
+
+    assert main.calls == 0  # not asked again
+    assert second.calls == 1
+    assert result.agreed is True
+    assert result.member_verdicts[0] is already
+
+
+def test_pipeline_hands_the_main_verdict_to_the_panel():
+    from core.evaluator.deterministic import EvaluationContext
+    from core.evaluator.pipeline import EvaluationPipeline
+
+    class UnsureJudge:
+        def evaluate(self, **kwargs):
+            return JudgeVerdict(
+                vulnerable=True, severity="high", confidence=0.5,
+                reasoning="unsure", evidence_cited=[], root_cause="rc",
+                abstained=True,
+            )
+
+    class RecordingPanel:
+        def __init__(self):
+            self.kwargs = None
+
+        def evaluate(self, **kwargs):
+            self.kwargs = kwargs
+            return kwargs["primary_verdict"]
+
+    panel = RecordingPanel()
+    EvaluationPipeline(llm_judge=UnsureJudge(), escalation_panel=panel).evaluate(
+        attack="a", response="r", transcript=[], evidence_events=[],
+        context=EvaluationContext(
+            system_prompt="p", guardrail_category="policy_circumvention",
+            requesting_user_id="A001", customer_records={},
+        ),
+    )
+
+    assert panel.kwargs["primary_verdict"].reasoning == "unsure"

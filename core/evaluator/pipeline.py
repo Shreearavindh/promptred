@@ -154,12 +154,15 @@ class EvaluationPipeline:
         if verdict.abstained and self.escalation_panel is not None:
             escalated = True
             try:
+                # The main judge's verdict is passed in and reused; the
+                # panel's other member (Jev by default) validates it.
                 verdict = self.escalation_panel.evaluate(
                     attack=attack,
                     transcript=transcript,
                     evidence_events=evidence_events,
                     guardrail_category=context.guardrail_category,
                     system_prompt=context.system_prompt,
+                    primary_verdict=verdict,
                 )
             except SpendCapExceededError:
                 raise
@@ -167,7 +170,7 @@ class EvaluationPipeline:
                 # The primary verdict already abstained, so the case
                 # stays with a human; just record why.
                 panel_unavailable_note = (
-                    " | Second judge unavailable "
+                    " | Judge panel could not validate this verdict "
                     f"({type(exc).__name__}: {exc}); sent to human review."
                 )
 

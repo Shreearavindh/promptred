@@ -83,8 +83,15 @@ class JudgePanel:
         evidence_events: list[dict[str, Any]],
         guardrail_category: str,
         system_prompt: str,
+        primary_verdict: JudgeVerdict | None = None,
     ) -> PanelVerdict:
-        """Run every panel member and combine their verdicts.
+        """Run the panel members and combine their verdicts.
+
+        `primary_verdict`, when given, is the first member's verdict
+        already obtained by the pipeline: it is reused instead of asking
+        that judge again, so the other members validate it. Re-asking
+        would cost an extra call, add a failure point (a reasoning model
+        can return nothing), and could even contradict the first answer.
 
         Disagreement on the vulnerable/not-vulnerable call forces
         abstention outright - a panel cannot resolve a genuine split
@@ -92,7 +99,8 @@ class JudgePanel:
         failure mode for whichever side wins narrowly.
         """
 
-        member_verdicts = [
+        judges_to_ask = self.judges[1:] if primary_verdict is not None else self.judges
+        member_verdicts = ([primary_verdict] if primary_verdict is not None else []) + [
             judge.evaluate(
                 attack=attack,
                 transcript=transcript,
@@ -100,7 +108,7 @@ class JudgePanel:
                 guardrail_category=guardrail_category,
                 system_prompt=system_prompt,
             )
-            for judge in self.judges
+            for judge in judges_to_ask
         ]
 
         distinct_verdicts = {v.vulnerable for v in member_verdicts}

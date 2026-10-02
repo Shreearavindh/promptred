@@ -122,7 +122,7 @@ def test_panel_outage_after_an_abstention_still_goes_to_human_review():
     assert result.abstained is True
     assert result.escalated_to_panel is True
     assert result.judge_unavailable is True
-    assert "Second judge unavailable" in result.reasoning
+    assert "Judge panel could not validate this verdict" in result.reasoning
 
 
 def test_spend_cap_from_the_judge_still_stops_everything():
