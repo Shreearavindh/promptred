@@ -315,6 +315,21 @@ def _print_scan_summary(scan_result) -> None:
     if not independence.get("judge_independent", True):
         print(f"WARNING: {independence.get('warning')}")
 
+    if scan_result.offline:
+        print(
+            "OFFLINE MODE: no AI used (fixed attacks, rules-based bot, "
+            "rules-only verdicts). A smoke test, not a security verdict."
+        )
+
+    failed = scan_result.failed_attempts
+    judge_down = scan_result.judge_unavailable_findings
+    if failed or judge_down:
+        print(
+            f"WARNING - INCOMPLETE SCAN: {len(failed)} attack(s) could not "
+            f"run, {len(judge_down)} verdict(s) made without the LLM judge. "
+            "Do not treat this as a clean result."
+        )
+
     for finding in sorted(
         vulnerable, key=lambda f: -f.severity.score
     ):
@@ -514,6 +529,7 @@ def run_scan_command(args: argparse.Namespace) -> int:
         budget_usd=args.budget,
         progress_callback=print,
         strategy_names=strategy_names,
+        offline=args.offline,
     )
 
     try:
@@ -547,8 +563,9 @@ def run_scan_command(args: argparse.Namespace) -> int:
 
     _print_scan_summary(scan_result)
     _print_cost_summary(scan_result)
-    _print_cost_economics(scan_result)
-    _print_account_credit_status()
+    if not scan_result.offline:
+        _print_cost_economics(scan_result)
+        _print_account_credit_status()
 
     json_path, html_path = _save_reports(
         scan_result, args.output
@@ -586,6 +603,7 @@ def run_benchmark_command(args: argparse.Namespace) -> int:
         budget_usd=args.budget,
         progress_callback=print,
         strategy_names=strategy_names,
+        offline=args.offline,
     )
 
     try:
@@ -601,8 +619,9 @@ def run_benchmark_command(args: argparse.Namespace) -> int:
 
     _print_scan_summary(scan_result)
     _print_cost_summary(scan_result)
-    _print_cost_economics(scan_result)
-    _print_account_credit_status()
+    if not scan_result.offline:
+        _print_cost_economics(scan_result)
+        _print_account_credit_status()
 
     json_path, html_path = _save_reports(
         scan_result, args.output
@@ -718,6 +737,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Attack turns per guardrail (1 or 3, default: 1)",
     )
     scan_parser.add_argument(
+        "--offline",
+        action="store_true",
+        help=(
+            "Run with no AI and no API key: fixed real-world attacks, "
+            "the rules-based target bot and rules-only verdicts. A "
+            "smoke test for when the models are down, not a security "
+            "verdict (rules alone miss most breaks)."
+        ),
+    )
+    scan_parser.add_argument(
         "--max-attacks",
         type=int,
         default=60,
@@ -777,6 +806,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         choices=[1, 3],
         default=1,
+    )
+    benchmark_parser.add_argument(
+        "--offline",
+        action="store_true",
+        help=(
+            "Run with no AI and no API key: fixed real-world attacks, "
+            "the rules-based target bot and rules-only verdicts. A "
+            "smoke test for when the models are down, not a security "
+            "verdict (rules alone miss most breaks)."
+        ),
     )
     benchmark_parser.add_argument(
         "--max-attacks",

@@ -228,6 +228,7 @@ def test_a_failing_attack_does_not_abort_the_whole_scan():
         bot_factory=_fake_bot_factory,
         progress_callback=messages.append,
         strategy_names=["single"],
+        static_fallback=False,  # the fallback has its own tests below
     )
 
     result = orchestrator.scan_prompt(
@@ -236,6 +237,10 @@ def test_a_failing_attack_does_not_abort_the_whole_scan():
 
     # 4 categories total, 1 raised - the other 3 should still succeed.
     assert len(result.findings) == 3
+    # ...and the failure is recorded, not silently dropped.
+    assert len(result.failed_attempts) == 1
+    assert result.failed_attempts[0]["guardrail_category"] == "unauthorized_refund"
+    assert result.is_complete is False
     assert any("ERROR" in m for m in messages)
     assert not any(
         f.guardrail_category == "unauthorized_refund"
@@ -417,6 +422,7 @@ def test_taxonomy_pattern_failure_does_not_block_sibling_patterns():
         pipeline=NeverVulnerablePipeline(),
         bot_factory=_fake_bot_factory,
         progress_callback=messages.append,
+        static_fallback=False,  # the fallback has its own tests below
     )
 
     result = orchestrator.scan_prompt(

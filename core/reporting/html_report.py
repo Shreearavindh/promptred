@@ -63,6 +63,7 @@ class HTMLReportGenerator:
   <h1>PromptRed Scan Report</h1>
   <p class="meta">Generated {_esc(datetime.now(timezone.utc).isoformat())}</p>
 </header>
+{self._render_degraded_banner(scan_result)}
 {self._render_independence(scan_result.model_independence)}
 {self._render_executive_summary(scan_result, vulnerable, needs_review, severity_counts, risk_score)}
 {self._render_cost_summary(scan_result.token_summary)}
@@ -113,6 +114,55 @@ class HTMLReportGenerator:
         warning = _esc(independence.get("warning", ""))
         return f'<div class="independence warn">{warning}</div>'
 
+    @staticmethod
+    def _render_degraded_banner(scan_result: ScanResult) -> str:
+        """Top-of-report warning when the scan was offline or degraded.
+
+        An incomplete scan must never read as a clean result: attacks
+        that could not run, and verdicts made without the LLM judge,
+        are called out before any number is shown.
+        """
+
+        parts = []
+
+        if scan_result.offline:
+            parts.append(
+                '<div class="degraded offline"><strong>Offline mode: no AI '
+                "was used.</strong> Fixed attacks, a rules-based bot and "
+                "rules-only verdicts. Rules alone miss most real breaks, so "
+                "treat this as a smoke test, not a security verdict.</div>"
+            )
+
+        failed = scan_result.failed_attempts
+        judge_down = scan_result.judge_unavailable_findings
+
+        if failed or judge_down:
+            details = []
+            if failed:
+                details.append(
+                    f"{len(failed)} attack(s) could not run or could not "
+                    "be evaluated because a model was unavailable"
+                )
+            if judge_down:
+                details.append(
+                    f"{len(judge_down)} verdict(s) were made without the "
+                    "LLM judge (rules hit, or sent to human review)"
+                )
+            rows = "".join(
+                f"<li>{_esc(f['guardrail_category'])}"
+                f"{' / ' + _esc(f['attack_label']) if f.get('attack_label') else ''}"
+                f" ({_esc(f['stage'])}): {_esc(f['error'])}</li>"
+                for f in failed
+            )
+            parts.append(
+                '<div class="degraded incomplete"><strong>Incomplete scan.'
+                "</strong> " + "; ".join(details) + ". Do not treat this "
+                "report as a clean result; re-run when the models are "
+                "available." + (f"<ul>{rows}</ul>" if rows else "") + "</div>"
+            )
+
+        return "".join(parts)
+
     def _render_executive_summary(
         self,
         scan_result: ScanResult,
@@ -129,6 +179,9 @@ class HTMLReportGenerator:
         review_stat_class = (
             "stat needs-review-stat" if needs_review else "stat"
         )
+        failed_stat_class = (
+            "stat failed-stat" if scan_result.failed_attempts else "stat"
+        )
 
         return f"""
 <section class="summary">
@@ -139,6 +192,7 @@ class HTMLReportGenerator:
     <div class="stat"><span class="stat-value">{len(vulnerable)}</span><span class="stat-label">Confirmed Vulnerable</span></div>
     <div class="{review_stat_class}"><span class="stat-value">{len(needs_review)}</span><span class="stat-label">Needs Human Review</span></div>
     <div class="stat"><span class="stat-value">{risk_score}</span><span class="stat-label">Aggregate Risk Score</span></div>
+    <div class="{failed_stat_class}"><span class="stat-value">{len(scan_result.failed_attempts)}</span><span class="stat-label">Could Not Run</span></div>
   </div>
   <table class="severity-table">
     <thead><tr><th>Severity</th><th>Count</th></tr></thead>
@@ -312,6 +366,11 @@ td, th { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
 .independence { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: 600; }
 .independence.ok { background: #dcfce7; color: #166534; }
 .independence.warn { background: #fef3c7; color: #92400e; }
+.degraded { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+.degraded.incomplete { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.degraded.offline { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
+.degraded ul { margin: 0.5rem 0 0 1.25rem; }
+.failed-stat .stat-value { color: #b91c1c; }
 .finding { border-left: 4px solid #6b7280; padding: 1rem; margin-bottom: 1rem; background: #f8fafc; border-radius: 4px; }
 .finding-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
 .badge { color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }

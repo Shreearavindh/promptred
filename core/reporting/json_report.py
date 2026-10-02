@@ -42,11 +42,18 @@ class JSONReportGenerator:
                 "total_attacks": len(scan_result.findings),
                 "vulnerable_findings": len(vulnerable),
                 "needs_human_review": len(needs_review),
+                "failed_attacks": len(scan_result.failed_attempts),
+                "judge_unavailable_verdicts": len(
+                    scan_result.judge_unavailable_findings
+                ),
+                "complete": scan_result.is_complete,
+                "offline": scan_result.offline,
                 "aggregate_risk_score": risk_score,
                 "severity_distribution": severity_counts,
             },
             "model_independence": scan_result.model_independence,
             "token_economics": scan_result.token_summary,
+            "failed_attempts": scan_result.failed_attempts,
             "findings": [
                 finding.to_dict() for finding in scan_result.findings
             ],

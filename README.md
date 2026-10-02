@@ -65,6 +65,21 @@ Tools for testing prompt injection already exist. promptfoo has plugins for prom
 - **The LLM is a component, not the security boundary.** Spend caps, token ceilings, attack limits and escalation live in code, not in prompts.
 - **Deterministic evidence first.** Mock tool calls, verbatim leak checks and base64-decoded leak checks are tested mechanically. The LLM judge rules only on what rules cannot observe.
 
+## When the AI is down
+
+PromptRed depends on rented models, so it is built to degrade honestly rather than report a false "all clear":
+
+| Model down | What PromptRed does |
+|---|---|
+| Attacker | Replays a fixed real-world attack instead (a cited incident prompt, or a Gandalf attack for prompt extraction), labelled `FALLBACK-...` in the report |
+| Judge | A rules hit is still reported as a finding; anything else goes to **Needs Human Review**, never to "held" |
+| Second judge | The case stays in human review, with the reason recorded |
+| Target | Nothing can be tested; the attack is recorded as failed |
+
+Any attack that could not run, and any verdict made without the judge, is listed in the report under an **Incomplete scan** warning ("Do not treat this report as a clean result"). The JSON report shows `complete: false`.
+
+`python promptred.py scan --prompt-file prompt.txt --offline` runs the whole pipeline with **no AI and no API key**: fixed attacks, the rules-based bot, and rules-only verdicts. It is a smoke test for when the models are down, not a security verdict, because rules alone catch only about a third of real breaks.
+
 ## Cost
 
 Measured from the OpenRouter account balance before and after each run, not from estimates:
@@ -97,5 +112,6 @@ python promptred.py scan --prompt-file path/to/prompt.txt --output reports/
 - `eval --suite judge` re-runs the judge evaluation.
 - `--strategies taxonomy,gandalf` adds the public-dataset attacks.
 - `--max-attacks` defaults to 60.
+- `--offline` runs with no AI and no API key (see below).
 
 Tests (offline, no model calls): `python -m pytest tests/ --ignore=tests/test_llm_client.py`

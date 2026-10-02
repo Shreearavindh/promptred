@@ -6,10 +6,17 @@ scan over one or more system prompts - either a single prompt/prompt
 file, or every prompt discovered by core/discovery/prompt_scanner.py
 when pointed at a project directory. This is the module the CLI's
 `scan` command drives.
+
+Resilience when a model is down: a failed attack is retried once with a
+fixed real-world attack (core/attacks/strategies/static_attacks.py)
+instead of being dropped; anything that still fails is recorded in
+ScanResult.failed_attempts so the report can say the scan is incomplete
+rather than look clean. `offline=True` runs with no AI at all: fixed
+attacks, the rules-based bot, and rules-only verdicts.
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
 
 from core.attacks.generator import AttackGenerator
@@ -21,6 +28,11 @@ from core.attacks.strategies.base import (
 from core.attacks.strategies.public_dataset import PublicDatasetStrategy
 from core.attacks.strategies.seed_augmented import SeedAugmentedStrategy
 from core.attacks.strategies.single import SingleAttemptStrategy
+from core.attacks.strategies.static_attacks import (
+    StaticAttackStrategy,
+    StaticFallback,
+    run_static_attack,
+)
 from core.attacks.strategies.taxonomy import TaxonomyStrategy
 from core.discovery.prompt_scanner import PromptScanner
 from core.evaluator.deterministic import EvaluationContext
@@ -85,7 +97,29 @@ def build_default_strategy_registry() -> StrategyRegistry:
     registry.register("taxonomy", TaxonomyStrategy)
     registry.register("seed", SeedAugmentedStrategy)
     registry.register("gandalf", PublicDatasetStrategy)
+    registry.register("static", StaticAttackStrategy)
     return registry
+
+
+# Strategies that never call the attacker model, so a failure in them is
+# not an attacker outage and a static fallback would not help.
+STATIC_STRATEGY_NAMES = {"static", "gandalf"}
+OFFLINE_STRATEGY_NAMES = ["static"]
+
+
+def _offline_bot_factory(
+    system_prompt: str,
+    user_id: str,
+    evidence_collector: EvidenceCollector,
+) -> "ChatBot":
+    """Rules-based bot (keyword routing, mock tools): no model calls."""
+
+    return SyntheticSupportBot(
+        system_prompt=system_prompt,
+        user_id=user_id,
+        use_llm=False,
+        evidence_collector=evidence_collector,
+    )
 
 
 def _default_bot_factory(
@@ -170,6 +204,12 @@ class ScanResult:
     model_independence: dict[str, Any]
     token_summary: dict[str, Any]
     prompts_scanned: int
+    # Attacks that could not run or could not be evaluated (model down,
+    # bad output). Never silently dropped: their presence makes the
+    # scan incomplete. Each entry: prompt_source, guardrail_category,
+    # attack_label, strategy, stage ("attack" or "evaluation"), error.
+    failed_attempts: list[dict[str, Any]] = field(default_factory=list)
+    offline: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -179,7 +219,26 @@ class ScanResult:
             "model_independence": self.model_independence,
             "token_summary": self.token_summary,
             "prompts_scanned": self.prompts_scanned,
+            "failed_attempts": self.failed_attempts,
+            "offline": self.offline,
         }
+
+    @property
+    def judge_unavailable_findings(self) -> list[Finding]:
+        """Findings decided without the LLM judge because it was down."""
+
+        return [
+            finding
+            for finding in self.findings
+            if getattr(finding.evaluation, "judge_unavailable", False)
+        ]
+
+    @property
+    def is_complete(self) -> bool:
+        """False if any attack failed or any verdict lacked the judge.
+        An incomplete scan must never be read as a clean result."""
+
+        return not self.failed_attempts and not self.judge_unavailable_findings
 
     @property
     def vulnerable_findings(self) -> list[Finding]:
@@ -233,20 +292,38 @@ class ScanOrchestrator:
         bot_factory: BotFactory | None = None,
         strategy_names: list[str] | None = None,
         strategy_registry: StrategyRegistry | None = None,
+        offline: bool = False,
+        static_fallback: bool = True,
     ) -> None:
+        """`offline=True` builds no model clients at all (no API key
+        needed): fixed attacks, the rules-based bot, rules-only
+        verdicts. `static_fallback` retries a failed attack once with a
+        fixed real-world attack instead of dropping it."""
+
+        self.offline = offline
+        self.static_fallback = StaticFallback() if static_fallback else None
         self.token_tracker = (
             token_tracker or get_global_token_tracker()
         )
-        self.generator = generator or AttackGenerator(
-            token_tracker=self.token_tracker
-        )
-        self.bot_factory = (
-            bot_factory or self._make_default_bot_factory()
-        )
-        self.pipeline = pipeline or EvaluationPipeline(
-            token_tracker=self.token_tracker,
-            escalation_panel=self._make_default_escalation_panel(),
-        )
+
+        if offline:
+            self.generator = generator
+            self.bot_factory = bot_factory or _offline_bot_factory
+            self.pipeline = pipeline or EvaluationPipeline(
+                deterministic_only=True
+            )
+            strategy_names = OFFLINE_STRATEGY_NAMES
+        else:
+            self.generator = generator or AttackGenerator(
+                token_tracker=self.token_tracker
+            )
+            self.bot_factory = (
+                bot_factory or self._make_default_bot_factory()
+            )
+            self.pipeline = pipeline or EvaluationPipeline(
+                token_tracker=self.token_tracker,
+                escalation_panel=self._make_default_escalation_panel(),
+            )
         self.severity_scorer = severity_scorer or SeverityScorer()
         self.rca_analyzer = rca_analyzer or RootCauseAnalyzer()
         self.remediation_mapper = (
@@ -403,7 +480,18 @@ class ScanOrchestrator:
     ) -> ScanResult:
         categories = guardrails or ALL_GUARDRAIL_CATEGORIES
         findings: list[Finding] = []
+        failures: list[dict[str, Any]] = []
         attack_count = 0
+
+        def record_failure(source, category, label, strategy_name, stage, error):
+            failures.append({
+                "prompt_source": source,
+                "guardrail_category": category,
+                "attack_label": label,
+                "strategy": strategy_name,
+                "stage": stage,
+                "error": f"{type(error).__name__}: {error}",
+            })
 
         for source_label, system_prompt in prompts:
             for category in categories:
@@ -416,7 +504,9 @@ class ScanOrchestrator:
                             f"Reached max_attacks={max_attacks}; "
                             "stopping scan."
                         )
-                        return self._finalize(findings, len(prompts))
+                        return self._finalize(
+                            findings, len(prompts), failures
+                        )
 
                     self._check_budget()
 
@@ -446,7 +536,7 @@ class ScanOrchestrator:
                                 "stopping scan."
                             )
                             return self._finalize(
-                                findings, len(prompts)
+                                findings, len(prompts), failures
                             )
 
                         label_suffix = (
@@ -455,15 +545,48 @@ class ScanOrchestrator:
                             else ""
                         )
 
+                        strategy_name = strategy.name
+
                         if not attempt.succeeded:
-                            attack_count += 1
+                            original_error = attempt.error
                             self.progress_callback(
                                 f"[{source_label}] {category}"
                                 f"{label_suffix}: ERROR "
-                                f"({type(attempt.error).__name__}: "
-                                f"{attempt.error}) - skipping"
+                                f"({type(original_error).__name__}: "
+                                f"{original_error})"
                             )
-                            continue
+                            fallback = self._try_static_fallback(
+                                strategy.name,
+                                system_prompt,
+                                category,
+                                requesting_user_id,
+                                turns,
+                            )
+                            if fallback is None or not fallback.succeeded:
+                                attack_count += 1
+                                record_failure(
+                                    source_label,
+                                    category,
+                                    attempt.label,
+                                    strategy.name,
+                                    "attack",
+                                    original_error
+                                    if fallback is None
+                                    else fallback.error,
+                                )
+                                self.progress_callback(
+                                    f"[{source_label}] {category}"
+                                    f"{label_suffix}: could not run - "
+                                    "recorded as a failed attack"
+                                )
+                                continue
+                            attempt = fallback
+                            strategy_name = "static_fallback"
+                            label_suffix = f"/{attempt.label}"
+                            self.progress_callback(
+                                f"[{source_label}] {category}: replaying "
+                                f"fixed attack {attempt.label} instead"
+                            )
 
                         try:
                             finding = self._evaluate_harness_result(
@@ -473,18 +596,26 @@ class ScanOrchestrator:
                                 requesting_user_id,
                                 attempt.harness_result,
                                 attack_pattern_id=attempt.label,
-                                strategy_name=strategy.name,
+                                strategy_name=strategy_name,
                             )
                         except SpendCapExceededError:
                             raise
                         except Exception as exc:
                             attack_count += 1
+                            record_failure(
+                                source_label,
+                                category,
+                                attempt.label,
+                                strategy_name,
+                                "evaluation",
+                                exc,
+                            )
                             self.progress_callback(
                                 f"[{source_label}] {category}"
                                 f"{label_suffix}: ERROR "
                                 f"(evaluation failed: "
                                 f"{type(exc).__name__}: {exc}) - "
-                                "skipping"
+                                "recorded as a failed attack"
                             )
                             continue
 
@@ -502,7 +633,44 @@ class ScanOrchestrator:
                             f"(severity={finding.severity.level})"
                         )
 
-        return self._finalize(findings, len(prompts))
+        return self._finalize(findings, len(prompts), failures)
+
+    def _try_static_fallback(
+        self,
+        strategy_name: str,
+        system_prompt: str,
+        category: str,
+        requesting_user_id: str,
+        turns: int,
+    ):
+        """Replay a fixed real-world attack after a failed attempt.
+
+        Returns None when no fallback applies (disabled, offline, the
+        failed strategy was already static, or the category has no fixed
+        attacks). If the target itself is down, the fallback fails too
+        and the caller records the attack as failed.
+        """
+
+        if (
+            self.static_fallback is None
+            or self.offline
+            or strategy_name in STATIC_STRATEGY_NAMES
+        ):
+            return None
+
+        picked = self.static_fallback.next_rows(category, turns)
+        if picked is None:
+            return None
+        label, rows = picked
+        return run_static_attack(
+            self.bot_factory,
+            rows,
+            system_prompt,
+            category,
+            requesting_user_id,
+            turns,
+            label=label,
+        )
 
     def _evaluate_harness_result(
         self,
@@ -571,10 +739,13 @@ class ScanOrchestrator:
         self,
         findings: list[Finding],
         prompts_scanned: int,
+        failures: list[dict[str, Any]] | None = None,
     ) -> ScanResult:
         return ScanResult(
             findings=findings,
             model_independence=self.model_independence.to_dict(),
             token_summary=self.token_tracker.summary(),
             prompts_scanned=prompts_scanned,
+            failed_attempts=list(failures or []),
+            offline=self.offline,
         )

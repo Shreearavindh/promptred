@@ -175,6 +175,7 @@ class FakeOrchestrator:
         budget_usd=None,
         progress_callback=None,
         strategy_names=None,
+        offline=False,
     ):
         self.progress_callback = progress_callback or (
             lambda message: None
@@ -270,6 +271,7 @@ def test_scan_command_reports_spend_cap_cleanly(
             budget_usd=None,
             progress_callback=None,
             strategy_names=None,
+            offline=False,
         ):
             pass
 

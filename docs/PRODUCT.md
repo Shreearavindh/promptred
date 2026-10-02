@@ -17,6 +17,7 @@
 | Guardrail categories | System-prompt extraction, unauthorized refund, cross-user data access, policy circumvention (default: all four) |
 | Attack strategies | `taxonomy` (default), `seed` (real incidents), `single`, `gandalf` (public dataset) |
 | Limits | `--max-attacks` (default 60), `--turns` 1 or 3, `PROMPTRED_SPEND_CAP_USD` |
+| Offline | `--offline`: no AI, no API key; fixed attacks, rules-based bot, rules-only verdicts |
 | Models | `.env`: one attacker, target and judge model each, from different families |
 
 ## Output
@@ -72,7 +73,7 @@ The report also shows totals, real token cost and latency per model role. It war
  OUTPUT: HTML + JSON report -- verdicts, transcripts, confidence, cost, latency
 ```
 
-Code owns the order, the limits and the decisions about escalation. LLMs generate attacks, play the target and judge what rules cannot see. Spend caps, token ceilings and attack limits are enforced in code, never in prompts.
+If a model is down, a failed attack is replayed with a fixed real-world attack, a judge outage falls back to the rules verdict or human review, and the report is marked incomplete. Code owns the order, the limits and the decisions about escalation. LLMs generate attacks, play the target and judge what rules cannot see. Spend caps, token ceilings and attack limits are enforced in code, never in prompts.
 
 | Module | Role |
 |---|---|
