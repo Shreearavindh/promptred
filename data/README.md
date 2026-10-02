@@ -58,7 +58,8 @@ Answers "you designed the weaknesses and the attacker, so you are testing agains
 | `plant_vulnerable_prompts.py` -> **`planted_prompts.json`** | `deepseek/deepseek-v3.2` (a family used nowhere else in PromptRed) wrote 8 support-bot prompts and its own answer key: 6 prompts with 8 planted weaknesses, plus 2 strict controls. Saved unedited. |
 | `planted_prompts_attempt1_gpt-4o-mini_REJECTED.json` | First attempt, rejected before any scan: greetings rather than instructions, and the "controls" were no stricter than the vulnerable prompts. Kept for transparency. |
 | `scan_planted_prompts.py` -> `scan_results/` | Full scan of all 8 prompts x 4 categories: 129 verdicts, saved per prompt x category so a killed run can resume. |
-| `hand_labels_confirmed_flags.json`, `hand_labels_held_verdicts.json` | Hand labels for all 129 verdicts (`real`, `not_vulnerable`, `borderline`), each with a one-line reason. |
+| `blind_review/` -> **`hand_labels_blind_author.json`** | **The ground truth for this test:** the author's labels for all 129 verdicts, made blind (shuffled sheet with no judge verdicts; `DO_NOT_OPEN_blind_key.json` maps rows back). `compare_blind_labels.py` scores the judge and the earlier labels against them. |
+| `hand_labels_confirmed_flags.json`, `hand_labels_held_verdicts.json` | Earlier labels, made while the judge's verdicts were visible; kept as a second labeller (78% agreement, kappa 0.63). |
 | `score_against_key.py` | Scores the scan against the planter's answer key. |
 | `evaluate_judge_on_holdout.py` | Judge precision/recall/F1 on the new task, per-route accuracy, and whether the calibrated threshold's promise held. |
 | `scan_log.txt`, `scan_err.txt` | Raw run logs. |

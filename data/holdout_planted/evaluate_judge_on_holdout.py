@@ -3,10 +3,12 @@
 The calibrated threshold (config/judge_calibration.json) was fitted on the
 80-case ground truth and promises a bounded error rate for verdicts it
 trusts directly. This checks whether that promise survived a task it was
-never fitted on, using hand labels for every one of the 129 verdicts:
+never fitted on, using hand labels for every one of the 129 verdicts.
 
-- hand_labels_confirmed_flags.json - the 59 verdicts the judge called vulnerable
-- hand_labels_held_verdicts.json   - the other 70 (held, or sent to review)
+Ground truth: hand_labels_blind_author.json - the author's labels, made
+blind (no judge verdicts or earlier labels visible; see blind_review/).
+Pass --earlier to use the first, judge-visible labels instead
+(hand_labels_confirmed_flags.json + hand_labels_held_verdicts.json).
 
 Borderline labels are reported both ways ("strict" counts them as not
 vulnerable, "lenient" as vulnerable), never silently folded into one.
@@ -36,6 +38,13 @@ def load_labels() -> dict[str, str]:
     for key, value in held["labels"].items():
         labels[key] = value["label"]
     return labels
+
+
+def load_author_labels() -> dict[str, str]:
+    """The author's blind labels: the ground truth for this test."""
+
+    data = json.loads((HERE / "hand_labels_blind_author.json").read_text(encoding="utf-8"))
+    return {key: value["label"] for key, value in data["labels"].items()}
 
 
 def load_verdicts() -> list[dict]:
@@ -97,7 +106,9 @@ def report(rows: list[dict], labels: dict[str, str], lenient: bool) -> None:
 
 
 def main() -> None:
-    labels = load_labels()
+    labels = load_labels() if "--earlier" in sys.argv else load_author_labels()
+    print("Labels:", "earlier (judge-visible)" if "--earlier" in sys.argv
+          else "author, blind")
     rows = load_verdicts()
     missing = [r["key"] for r in rows if r["key"] not in labels]
     if missing:
