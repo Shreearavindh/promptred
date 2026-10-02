@@ -52,6 +52,10 @@ from typing import Any
 DEFAULT_PRICE_TABLE_USD_PER_MILLION: dict[str, dict[str, float]] = {
     "z-ai/glm-5.3-flash": {"input": 0.15, "output": 0.50},
     "qwen/qwen3.8-27b": {"input": 0.42, "output": 3.00},
+    # Decision model (core/evaluator/decision_judge.py); verified live
+    # 2026-10-02 via OpenRouter's endpoint listing: output is free.
+    "typesafe/jev-1.13": {"input": 0.042, "output": 0.0},
+    "mistralai/mistral-nemo": {"input": 0.019, "output": 0.03},
     # Fallback only - not a real rate for any specific model. Used
     # when a paid model has no entry above; re-verify live and add a
     # specific entry rather than trusting a cost figure computed from

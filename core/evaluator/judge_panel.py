@@ -150,7 +150,11 @@ class JudgePanel:
             ),
         )
 
-        most_confident = max(member_verdicts, key=lambda v: v.confidence)
+        # Explain with the most confident member that actually gave an
+        # explanation: a decision-model member (decision_judge.py) returns
+        # a choice and confidence but no reasoning or root cause.
+        explainers = [v for v in member_verdicts if v.root_cause] or member_verdicts
+        most_confident = max(explainers, key=lambda v: v.confidence)
 
         return PanelVerdict(
             vulnerable=vulnerable,

@@ -35,6 +35,7 @@ from core.attacks.strategies.static_attacks import (
 )
 from core.attacks.strategies.taxonomy import TaxonomyStrategy
 from core.discovery.prompt_scanner import PromptScanner
+from core.evaluator.decision_judge import DecisionJudge, is_decision_model
 from core.evaluator.deterministic import EvaluationContext
 from core.evaluator.judge_panel import JudgePanel
 from core.evaluator.llm_judge import LLMJudge
@@ -71,18 +72,19 @@ DEFAULT_STRATEGY_NAMES = ["taxonomy"]
 # selective_evaluation.py). Must be a distinct family from JUDGE_MODEL
 # (the primary), ATTACKER_MODEL, and TARGET_MODEL, or the panel adds
 # no real independence - an attacker who knows one model in a family
-# has a head start on the others. mistralai/mistral-nemo: verified
-# live on OpenRouter 2026-09-10 as the minimum-cost general-purpose
-# instruct model from a family untouched elsewhere in this project
-# ($0.019/M input, $0.03/M output - negligible even though it's only
-# called on abstained cases). Live-validated end to end the same day:
-# routing correct (panel only called on real abstentions), $0.0307
-# for the full validation run. Override via JUDGE_PANEL_SECOND_MODEL
-# if this specific model becomes unavailable or its price moves enough
-# to matter - re-check live before trusting any price here, per the
-# two stale-price incidents already found this project (2026-09-08,
-# 2026-09-10).
-DEFAULT_JUDGE_PANEL_SECOND_MODEL = "mistralai/mistral-nemo"
+# has a head start on the others.
+#
+# typesafe/jev-1.13 (TypeSafe's Jev, a structured decision model called
+# through core/evaluator/decision_judge.py) replaced mistralai/mistral-nemo
+# on 2026-10-02 after a measured comparison on the new-task test against
+# the author's blind labels (data/holdout_planted/compare_second_judges.py):
+# alone, Jev scored accuracy 85% / F1 0.83 vs mistral-nemo's 64% / 0.68,
+# and on the 14 cases the main judge was unsure about, main judge + Jev
+# made 1 automatic error vs 4 for the original mistral panel (sending more
+# cases to a human instead). About $0.00002 per verdict. Override via
+# JUDGE_PANEL_SECOND_MODEL (any OpenRouter chat model also works); the
+# decisions endpoint is alpha, so re-check it if calls start failing.
+DEFAULT_JUDGE_PANEL_SECOND_MODEL = "typesafe/jev-1.13"
 
 
 def resolve_judge_panel_second_model() -> str:
@@ -360,16 +362,25 @@ class ScanOrchestrator:
         verdict never reaches this panel at all.
         """
 
+        second_model = resolve_judge_panel_second_model()
+
+        if is_decision_model(second_model):
+            second_judge = DecisionJudge(
+                model=second_model, token_tracker=self.token_tracker
+            )
+        else:
+            second_judge = LLMJudge(
+                llm_client=LLMClient(
+                    model=second_model,
+                    token_tracker=self.token_tracker,
+                ),
+                token_tracker=self.token_tracker,
+            )
+
         return JudgePanel(
             judges=[
                 LLMJudge(token_tracker=self.token_tracker),
-                LLMJudge(
-                    llm_client=LLMClient(
-                        model=resolve_judge_panel_second_model(),
-                        token_tracker=self.token_tracker,
-                    ),
-                    token_tracker=self.token_tracker,
-                ),
+                second_judge,
             ],
         )
 

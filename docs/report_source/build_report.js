@@ -72,7 +72,7 @@ const children = [
     [
       ["Interface", "Own", "CLI plus HTML/JSON reports; the report is the product."],
       ["Orchestration", "Own", "Python harness. PyRIT does this too, but owning it made judge measurement first-class."],
-      ["Models", "Rent (OpenRouter)", "Attacker z-ai/glm-5.3-flash, target liquid/lfm-2.5-2.6b (free), judge qwen/qwen3.8-27b, panel mistralai/mistral-nemo: four families, so no judge grades its own family."],
+      ["Models", "Rent (OpenRouter)", "Attacker z-ai/glm-5.3-flash, target liquid/lfm-2.5-2.6b (free), judge qwen/qwen3.8-27b, panel TypeSafe Jev 1.13, a decision model: four families, so no judge grades its own family."],
       ["Attack data", "Rent + own", "Gandalf dataset, attack taxonomy, five cited real incidents."],
       ["Evaluation", "Own", "Hand-labelled ground truth and calibration: the differentiator."],
       ["Remediation", "Own, templated", "OWASP Top 10 for LLM Applications 2026 (e.g. LLM03:2026 Excessive Agency), templated per class. ChromaDB attack memory was cut."],
@@ -131,7 +131,7 @@ const children = [
   bullet("**Three eval suites** (attack quality, robustness to rephrasing, end-to-end benchmark) are built and unit-tested but were never run live."),
 
   h1("8. Difficulties and tuning"),
-  p("The hardest problems surfaced by reading real transcripts, not from tests. Two categories scored 0/20 because proven incident seeds were used only after a failure; seeding the first attempt lifted them to 1/20 and 6/20. The judge’s own prompt was injectable, since attacker text sat inside its instructions, so untrusted text is now fenced off. Agent failures were real too: fenced JSON the parser rejected, a reasoning model that spent its whole budget thinking and returned nothing, and root causes mis-read from the judge’s free text. Cost tracking went wrong twice when model prices doubled, so every cost now comes from the account balance. A first planted-prompt set was rejected because its controls were no stricter than its targets. Outages are handled honestly: a failed attack is replayed with a fixed real-world attack, a judge outage falls back to the rules verdict or human review, the report is flagged incomplete, and an offline mode runs with no AI at all."),
+  p("The hardest problems surfaced by reading real transcripts, not from tests. Two categories scored 0/20 because proven incident seeds were used only after a failure; seeding the first attempt lifted them to 1/20 and 6/20. The judge’s own prompt was injectable, since attacker text sat inside its instructions, so untrusted text is now fenced off. Agent failures were real too: fenced JSON the parser rejected, a reasoning model that spent its whole budget thinking and returned nothing, and root causes mis-read from the judge’s free text. Cost tracking went wrong twice when model prices doubled, so every cost now comes from the account balance. A first planted-prompt set was rejected because its controls were no stricter than its targets. The original second judge, mistral-nemo, was replaced after a head-to-head test: TypeSafe\u2019s Jev scored F1 0.83 to its 0.68, and cut automatic errors on the hardest cases from 4 to 1. Outages are handled honestly: a failed attack is replayed with a fixed real-world attack, a judge outage falls back to the rules verdict or human review, the report is flagged incomplete, and an offline mode runs with no AI at all."),
 
   h1("9. Rough edges and future path"),
   bullet("Make recalibration routine: a small labelled audit sample whenever PromptRed meets a new domain."),

@@ -469,7 +469,11 @@ def test_default_orchestrator_wires_a_judge_panel_for_escalation():
     assert isinstance(panel, JudgePanel)
     assert len(panel.judges) == 2
 
-    models = {judge.llm_client.model for judge in panel.judges}
+    # LLM judges carry their model on llm_client; the decision-model
+    # judge (Jev) carries it directly.
+    models = {
+        getattr(judge, "llm_client", judge).model for judge in panel.judges
+    }
 
     # One member is the primary judge's own model (independent
     # confirmation, not a coincidence), the other is the configured
