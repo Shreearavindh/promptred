@@ -121,7 +121,7 @@ If a model is down, a failed attack is replayed with a fixed real-world attack, 
 | Judge F1 against hand labels (80 real cases) | at least 0.80 | **0.842** (precision 0.76, recall 0.94) |
 | Judge F1 on a new task (prompts written by another model) | at least 0.80 | **0.83** |
 | Judge vs rules-only baseline | higher | 0.842 vs 0.50 |
-| Error of verdicts trusted without a human | at most 10% | 7.9% on the original set; 15.7% on the new task |
+| Error of verdicts decided without a human | at most 10% | One judge with a confidence threshold: 7.9% on the original set, but 15.7% on the new task. **Two judges (live, new task): 6.7%** (93.3% accuracy) |
 | Planted weaknesses found | at least 60% | **7 of 8 (88%)** |
 | Cost per scan (one prompt) | within a US$10 key | **about $0.14–0.20** for the full 34 attacks (about 50 scans per US$10); about $0.04–0.07 for the default 12 |
-| Scan time for one prompt | at most 10 minutes | about 1.5 minutes per attack (rate-limited free target) |
+| Scan time for one prompt | at most 10 minutes | **Missed:** about 1.1 minutes per attack, so about 13 minutes for the default 12 attacks and 35 for the full 34 (rate-limited free target, reasoning judge) |

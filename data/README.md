@@ -70,6 +70,13 @@ Answers "you designed the weaknesses and the attacker, so you are testing agains
 
 `run_20_attack_check.py` runs 5 live attacks per category against the same prompts as the ground truth. `results/` holds every attack, response, verdict, confidence and deciding route. Real cost: $0.0983.
 
+| Other runners here | What they ran |
+|---|---|
+| `run_demo_and_suites.py` | The video demo scan (9 attacks) plus the three eval suites that had never run live (attack generator, target robustness, system); $0.169 in total. Log: `run_demo_and_suites_log.txt`. |
+| `run_filter_check.py` | A fresh demo scan with the second judge checking every verdict, then the 129-case live re-judge (`data/holdout_planted/rejudge_with_filter.py`); $0.73 in total. Log: `run_filter_check_log.txt`. |
+
+Each runner reads the real OpenRouter balance before every step and stops at a set budget.
+
 ## `benchmarks/known_vulnerable_prompts.json`
 
 Five synthetic prompts with two planted weaknesses each, written for this project. They feed the `benchmark` command and the `system` eval suite. Because they were written alongside the attacker, `holdout_planted/` is the independent test.
