@@ -4,10 +4,10 @@
 
 ## Persona
 
-**The AI/ML engineer who builds a support bot** and must show the security lead it is safe before each release. They know prompting, not red-teaming. Checking one prompt change by hand means reading about 60 attack transcripts: at roughly two minutes each, that is two engineer-hours, about $170, per change.
+**The AI/ML engineer who builds a support bot** and must show the security lead it is safe before each release. They know prompting, not red-teaming. PromptRed runs **34 different attacks** against one prompt (all five strategies). Doing that by hand means writing and reading 34 attacks: at about five minutes each (an assumption: ~3 to write, ~2 to read and judge), that is nearly three engineer-hours, about $240, per prompt change.
 
 - **Secondary user: the application security lead.** They approve or block the release and need reproducible, severity-scored evidence.
-- **What changes for the engineer:** they get a ranked list of the breaks that matter, each with its transcript and fix, plus a short list of cases a human must decide. They no longer read 60 transcripts and guess.
+- **What changes for the engineer:** they get a ranked list of the breaks that matter, each with its transcript and fix, plus a short list of cases a human must decide. They no longer hand-write 34 attacks and judge every reply themselves.
 
 ## Input
 
@@ -123,5 +123,5 @@ If a model is down, a failed attack is replayed with a fixed real-world attack, 
 | Judge vs rules-only baseline | higher | 0.842 vs 0.50 |
 | Error of verdicts trusted without a human | at most 10% | 7.9% on the original set; 15.7% on the new task |
 | Planted weaknesses found | at least 60% | **7 of 8 (88%)** |
-| Cost per scan (one prompt, 12 attacks) | within a US$10 key | **about $0.04–0.07** (about 150 scans per US$10) |
+| Cost per scan (one prompt) | within a US$10 key | **about $0.14–0.20** for the full 34 attacks (about 50 scans per US$10); about $0.04–0.07 for the default 12 |
 | Scan time for one prompt | at most 10 minutes | about 1.5 minutes per attack (rate-limited free target) |

@@ -95,7 +95,7 @@ Measured from the OpenRouter account balance before and after each run, not from
 | Judging 80 cases | ~$0.365 (~$0.0046 per judged case) |
 | Full scan of 129 attacks: attacker, target, judge and panel escalations (independent holdout) | $0.86 (~$0.0067 per attack, all-in) |
 
-**Per scan:** a default scan of one system prompt runs **12 attacks** (3 per category) and costs about **$0.04–0.07**, measured on recent one-prompt scans at $0.004–0.006 per attack with both judges (9 attacks for $0.033 and $0.055; 17 for $0.098). That is roughly 150 scans on a US$10 key, at about 13 minutes each. The 60 in `--max-attacks` is only a safety cap, and the $0.86 above was the 8-prompt test, not one scan. The judge is about 94% of token spend: it is a reasoning model, producing about 2,400 output tokens per verdict. A process-wide spend cap (`PROMPTRED_SPEND_CAP_USD`) is checked before every call.
+**Per scan:** a default scan of one system prompt runs **12 attacks** (3 per category) and costs about **$0.04–0.07**, measured on recent one-prompt scans at $0.004–0.006 per attack with both judges (9 attacks for $0.033 and $0.055; 17 for $0.098). That is roughly 150 scans on a US$10 key, at about 13 minutes each. The **full set of 34 different attacks** per prompt (`--strategies taxonomy,seed,single,gandalf,static`) costs about **$0.14–0.20** and takes about 35 minutes: about 50 full scans per US$10. The 60 in `--max-attacks` is only a safety cap, and the $0.86 above was the 8-prompt test, not one scan. The judge is about 94% of token spend: it is a reasoning model, producing about 2,400 output tokens per verdict. A process-wide spend cap (`PROMPTRED_SPEND_CAP_USD`) is checked before every call.
 
 ## Running it
 
