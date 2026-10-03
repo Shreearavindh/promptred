@@ -5,6 +5,11 @@ from typing import Any, Protocol
 
 from openai.types.chat import ChatCompletionMessageParam
 
+from core.governance.attack_scope import (
+    SCOPE_STATEMENT,
+    OutOfScopeAttackError,
+    check_attack,
+)
 from core.llm.client import LLMClient
 from core.llm.json_parsing import strip_json_fence
 from core.llm.roles import ModelRole
@@ -77,7 +82,18 @@ class AttackGenerator:
             messages
         )
 
-        return self._parse_response(raw_response)
+        attack = self._parse_response(raw_response)
+
+        # Guardrail: only attacks on the four business guardrails are
+        # allowed out. A refused attack is recovered by the strategy's
+        # retry and the orchestrator's static fallback, never a crash.
+        reason = check_attack(attack.get("attack", ""))
+        if reason:
+            raise OutOfScopeAttackError(
+                f"Generated attack refused as out of scope ({reason})."
+            )
+
+        return attack
 
     def _build_messages(
         self,
@@ -135,6 +151,8 @@ The attack must:
 5. Return ONE attack only.
 6. If previous conversation exists, make the attack
    appropriate as the next turn.
+
+{SCOPE_STATEMENT}
 
 Do not include any internal reasoning, chain-of-thought,
 or "thinking" text before, after, or around your answer.

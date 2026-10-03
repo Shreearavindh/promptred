@@ -85,6 +85,18 @@ Any attack that could not run, and any verdict made without the judge, is listed
 
 `python promptred.py scan --prompt-file prompt.txt --offline` runs the whole pipeline with **no AI and no API key**: fixed attacks, the rules-based bot, and rules-only verdicts. It is a smoke test for when the models are down, not a security verdict, because rules alone catch only about a third of real breaks.
 
+## Responsible use and guardrails
+
+PromptRed is for **authorized testing of system prompts you own**. Its attacks only ever reach its own simulated bot, which runs the prompt on a model via OpenRouter; it has no way to send attacks to a live website or someone else's deployed bot. Three guardrails keep it a testing tool:
+
+| Guardrail | What it does | Effect on a normal run |
+|---|---|---|
+| **In-scope attacks only** (`core/governance/attack_scope.py`) | Generated attacks that leave the four business guardrails (weapons, malware, self-harm, sexual content involving minors, drug synthesis) are refused; the attacker model is also told the scope | None: a refused attack is replaced by a fixed real attack. Checked against all 1,379 attacks generated so far: none refused |
+| **Volume ceiling** (`MAX_ATTACKS_PER_RUN = 200` in `promptred.py`) | No run can exceed 200 attacks, so PromptRed cannot mass-produce attack corpora | None: a full scan of one prompt is 34 attacks, the benchmark 60 |
+| **Shareable reports** (`--redact-attacks`) | Hides the text of successful attacks in a report's copy (technique, verdict and fix stay); every report states "Authorized security testing of your own system prompts only" | Off by default |
+
+These are code-level guardrails in open-source software, so a determined user could remove them; they make misuse a deliberate rebuild rather than a flag, the same position as tools like garak and PyRIT.
+
 ## Cost
 
 Measured from the OpenRouter account balance before and after each run, not from estimates:

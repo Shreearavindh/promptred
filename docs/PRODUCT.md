@@ -18,6 +18,7 @@
 | Attack strategies | `taxonomy` (default), `seed` (real incidents), `single`, `gandalf` (public dataset) |
 | Limits | `--max-attacks` (default 60), `--turns` 1 or 3, `PROMPTRED_SPEND_CAP_USD` |
 | Offline | `--offline`: no AI, no API key; fixed attacks, rules-based bot, rules-only verdicts |
+| Sharing | `--redact-attacks`: hide successful attack text in the reports. Runs are capped at 200 attacks, and out-of-scope attacks are refused (see the README's "Responsible use and guardrails") |
 | Models | `.env`: one attacker, target and judge model each, from different families |
 
 ## Output

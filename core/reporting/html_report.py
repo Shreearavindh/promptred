@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from core.orchestrator import ScanResult
+from core.reporting.redaction import USAGE_NOTICE, redact_scan_result
 from core.reporting.json_report import SEVERITY_ORDER
 
 SEVERITY_COLORS = {
@@ -35,7 +36,9 @@ def _esc(value: Any) -> str:
 class HTMLReportGenerator:
     """Builds and saves a self-contained HTML report from a ScanResult."""
 
-    def generate(self, scan_result: ScanResult) -> str:
+    def generate(self, scan_result: ScanResult, redact_attacks: bool = False) -> str:
+        if redact_attacks:
+            scan_result = redact_scan_result(scan_result)
         vulnerable = scan_result.vulnerable_findings
         needs_review = scan_result.needs_review_findings
         severity_counts = self._severity_distribution(
@@ -62,6 +65,7 @@ class HTMLReportGenerator:
 <header>
   <h1>PromptRed Scan Report</h1>
   <p class="meta">Generated {_esc(datetime.now(timezone.utc).isoformat())}</p>
+  <p class="usage-notice">{_esc(USAGE_NOTICE)}{" Successful attack text is redacted in this copy." if redact_attacks else ""}</p>
 </header>
 {self._render_degraded_banner(scan_result)}
 {self._render_independence(scan_result.model_independence)}
@@ -79,11 +83,12 @@ class HTMLReportGenerator:
         self,
         scan_result: ScanResult,
         output_path: str | Path,
+        redact_attacks: bool = False,
     ) -> Path:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            self.generate(scan_result),
+            self.generate(scan_result, redact_attacks=redact_attacks),
             encoding="utf-8",
         )
         return output_path
@@ -366,6 +371,7 @@ td, th { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
 .independence { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: 600; }
 .independence.ok { background: #dcfce7; color: #166534; }
 .independence.warn { background: #fef3c7; color: #92400e; }
+.usage-notice { font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem; }
 .degraded { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
 .degraded.incomplete { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 .degraded.offline { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }

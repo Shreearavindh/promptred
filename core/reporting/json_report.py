@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from core.orchestrator import ScanResult
+from core.reporting.redaction import USAGE_NOTICE, redact_scan_result
 
 SEVERITY_ORDER = {
     "critical": 4,
@@ -25,7 +26,11 @@ SEVERITY_ORDER = {
 class JSONReportGenerator:
     """Builds and saves a structured JSON report from a ScanResult."""
 
-    def generate(self, scan_result: ScanResult) -> dict[str, Any]:
+    def generate(
+        self, scan_result: ScanResult, redact_attacks: bool = False
+    ) -> dict[str, Any]:
+        if redact_attacks:
+            scan_result = redact_scan_result(scan_result)
         vulnerable = scan_result.vulnerable_findings
         needs_review = scan_result.needs_review_findings
         severity_counts = self._severity_distribution(
@@ -37,6 +42,8 @@ class JSONReportGenerator:
 
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "usage_notice": USAGE_NOTICE,
+            "attacks_redacted": redact_attacks,
             "summary": {
                 "prompts_scanned": scan_result.prompts_scanned,
                 "total_attacks": len(scan_result.findings),
@@ -63,8 +70,9 @@ class JSONReportGenerator:
         self,
         scan_result: ScanResult,
         output_path: str | Path,
+        redact_attacks: bool = False,
     ) -> Path:
-        report = self.generate(scan_result)
+        report = self.generate(scan_result, redact_attacks=redact_attacks)
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(

@@ -324,28 +324,29 @@ def test_resolve_max_attacks_passes_through_a_positive_cap():
     assert _resolve_max_attacks(60) == 60
 
 
-def test_resolve_max_attacks_treats_zero_as_unbounded():
-    """0 means "no cap", matching ScanOrchestrator's own max_attacks=None
-    convention - NOT a literal cap of zero attacks, which would stop
-    the scan before it ran anything."""
+def test_resolve_max_attacks_treats_zero_as_the_ceiling():
+    """0 used to mean unbounded; a guardrail now caps every run so
+    PromptRed cannot be used to mass-produce attacks."""
 
-    from promptred import _resolve_max_attacks
+    from promptred import MAX_ATTACKS_PER_RUN, _resolve_max_attacks
 
-    assert _resolve_max_attacks(0) is None
-
-
-def test_resolve_max_attacks_treats_negative_as_unbounded():
-
-    from promptred import _resolve_max_attacks
-
-    assert _resolve_max_attacks(-1) is None
+    assert _resolve_max_attacks(0) == MAX_ATTACKS_PER_RUN
 
 
-def test_resolve_max_attacks_passes_through_none():
+def test_resolve_max_attacks_treats_negative_and_none_as_the_ceiling():
 
-    from promptred import _resolve_max_attacks
+    from promptred import MAX_ATTACKS_PER_RUN, _resolve_max_attacks
 
-    assert _resolve_max_attacks(None) is None
+    assert _resolve_max_attacks(-1) == MAX_ATTACKS_PER_RUN
+    assert _resolve_max_attacks(None) == MAX_ATTACKS_PER_RUN
+
+
+def test_resolve_max_attacks_clamps_requests_above_the_ceiling(capsys):
+
+    from promptred import MAX_ATTACKS_PER_RUN, _resolve_max_attacks
+
+    assert _resolve_max_attacks(MAX_ATTACKS_PER_RUN + 500) == MAX_ATTACKS_PER_RUN
+    assert "capped" in capsys.readouterr().out
 
 
 def test_benchmark_command_defaults_max_attacks_to_60():

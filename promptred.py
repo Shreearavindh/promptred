@@ -200,13 +200,28 @@ def _resolve_guardrails(raw: str | None) -> list[str] | None:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-def _resolve_max_attacks(value: int | None) -> int | None:
-    """0 or a negative value means "unbounded" - ScanOrchestrator's
-    own max_attacks=None convention, not a literal cap of 0 attacks
-    (which would stop the scan before it ran anything)."""
+# Guardrail: PromptRed tests prompts; it is not a generator of attack
+# corpora. A full scan of one prompt is 34 attacks and the benchmark 60,
+# so normal and grading runs never reach this ceiling.
+MAX_ATTACKS_PER_RUN = 200
+
+
+def _resolve_max_attacks(value: int | None) -> int:
+    """Cap the attacks in one run at MAX_ATTACKS_PER_RUN.
+
+    0, a negative value, None or anything above the ceiling resolves to
+    the ceiling, with a notice when the user asked for more.
+    """
+
+    if value is not None and value > MAX_ATTACKS_PER_RUN:
+        print(
+            f"Note: --max-attacks is capped at {MAX_ATTACKS_PER_RUN} "
+            "per run (PromptRed is a testing tool)."
+        )
+        return MAX_ATTACKS_PER_RUN
 
     if value is None or value <= 0:
-        return None
+        return MAX_ATTACKS_PER_RUN
 
     return value
 
@@ -221,6 +236,7 @@ def _resolve_strategies(raw: str | None) -> list[str] | None:
 def _save_reports(
     scan_result,
     output_dir: str,
+    redact_attacks: bool = False,
 ) -> tuple[Path, Path]:
     from datetime import datetime, timezone
 
@@ -235,8 +251,8 @@ def _save_reports(
     json_path = output_dir_path / f"promptred_scan_{timestamp}.json"
     html_path = output_dir_path / f"promptred_scan_{timestamp}.html"
 
-    JSONReportGenerator().save(scan_result, json_path)
-    HTMLReportGenerator().save(scan_result, html_path)
+    JSONReportGenerator().save(scan_result, json_path, redact_attacks=redact_attacks)
+    HTMLReportGenerator().save(scan_result, html_path, redact_attacks=redact_attacks)
 
     return json_path, html_path
 
@@ -568,7 +584,7 @@ def run_scan_command(args: argparse.Namespace) -> int:
         _print_account_credit_status()
 
     json_path, html_path = _save_reports(
-        scan_result, args.output
+        scan_result, args.output, redact_attacks=args.redact_attacks
     )
     print(f"\nJSON report: {json_path}")
     print(f"HTML report: {html_path}")
@@ -624,7 +640,7 @@ def run_benchmark_command(args: argparse.Namespace) -> int:
         _print_account_credit_status()
 
     json_path, html_path = _save_reports(
-        scan_result, args.output
+        scan_result, args.output, redact_attacks=args.redact_attacks
     )
     print(f"\nJSON report: {json_path}")
     print(f"HTML report: {html_path}")
@@ -737,6 +753,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Attack turns per guardrail (1 or 3, default: 1)",
     )
     scan_parser.add_argument(
+        "--redact-attacks",
+        action="store_true",
+        help=(
+            "Hide the text of successful attacks in the saved reports "
+            "(technique, verdict and fix stay), for sharing a report "
+            "without handing out working attacks."
+        ),
+    )
+    scan_parser.add_argument(
         "--offline",
         action="store_true",
         help=(
@@ -753,7 +778,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Cap the total number of attacks run across all "
             "guardrail categories combined (default: 60). Pass 0 "
-            "for unbounded."
+            f"for the maximum of {MAX_ATTACKS_PER_RUN}."
         ),
     )
     scan_parser.add_argument(
@@ -808,6 +833,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
     )
     benchmark_parser.add_argument(
+        "--redact-attacks",
+        action="store_true",
+        help=(
+            "Hide the text of successful attacks in the saved reports "
+            "(technique, verdict and fix stay), for sharing a report "
+            "without handing out working attacks."
+        ),
+    )
+    benchmark_parser.add_argument(
         "--offline",
         action="store_true",
         help=(
@@ -824,7 +858,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Cap the total number of attacks run across all "
             "guardrail categories combined (default: 60). Pass 0 "
-            "for unbounded."
+            f"for the maximum of {MAX_ATTACKS_PER_RUN}."
         ),
     )
     benchmark_parser.add_argument(
