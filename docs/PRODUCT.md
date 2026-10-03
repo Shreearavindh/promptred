@@ -96,7 +96,7 @@ Jev sends more cases to a human, but it is still the cheaper choice in engineeri
 | False alarms | 12 | **2** |
 | Missed breaks | 8 | **5** |
 | Human reviews | 5 (4%) | 25 (19%), 9 of them real breaks |
-| Extra cost per 60-attack scan | - | about $0.001 |
+| Extra cost per scan (Jev, 12 attacks) | - | well under $0.001 |
 
 About 20 more reviews (about 40 minutes) against ten fewer false alarms (about 150 minutes): engineering time falls from about 190 to about 80 minutes per 129 attacks, with fewer real breaks missed. The trade-off is that 16 of the 25 human reviews turn out to be safe cases. If the second judge is down, a confident main verdict (0.82 or above) is kept but flagged unvalidated and the report is marked incomplete; an unsure one goes to a human.
 
@@ -123,5 +123,5 @@ If a model is down, a failed attack is replayed with a fixed real-world attack, 
 | Judge vs rules-only baseline | higher | 0.842 vs 0.50 |
 | Error of verdicts trusted without a human | at most 10% | 7.9% on the original set; 15.7% on the new task |
 | Planted weaknesses found | at least 60% | **7 of 8 (88%)** |
-| Cost per 60-attack scan | within a US$10 key | **about $0.40** |
+| Cost per scan (one prompt, 12 attacks) | within a US$10 key | **about $0.04–0.07** (about 150 scans per US$10) |
 | Scan time for one prompt | at most 10 minutes | about 1.5 minutes per attack (rate-limited free target) |

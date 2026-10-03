@@ -84,8 +84,8 @@ const children = [
   table(
     ["Measure (real OpenRouter balance changes)", "Value"],
     [
-      ["One attack, all-in (attacker, target, judge, panel)", "$0.0067 (129 attacks, $0.86)"],
-      ["Default 60-attack scan", "≈ $0.40, about 25 scans on the US$10 key"],
+      ["One attack, all-in (attacker, target, both judges)", "$0.004\u20130.006 (measured scans)"],
+      ["One-prompt default scan (12 attacks)", "$0.04\u20130.07 measured; about 150 scans per US$10"],
       ["Share of token spend", "Judge ≈ 94% (reasoning model, ~2,400 output tokens per verdict)"],
       ["Median latency per call", "Target 9 s, attacker 20 s, judge 33 s"],
     ],
