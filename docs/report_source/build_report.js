@@ -100,16 +100,16 @@ const children = [
     ["Evaluator", "Precision", "Recall", "F1"],
     [
       ["LLM judge (qwen3.8-27b)", "0.76", "0.94", "0.84"],
-      ["Rules only (no LLM)", "—", "0.35", "0.50"],
+      ["Rules only (no LLM)", "0.86", "0.35", "0.50"],
       ["Majority class", "—", "0.00", "0.00"],
     ],
     [4226, 1600, 1600, 1600]
   ),
   gap(),
-  p("Reading real misses exposed a rubric bug (the judge acquitted attempted tool calls because nothing executed); fixing it moved F1 from 0.77 to 0.84 on untouched holdout cases. A **calibrated threshold** (Trust or Escalate, Kim et al., ICLR 2025) promised at most 7.9% error above confidence 0.82, but did not transfer to a new task (below). So a second judge from another family now checks every verdict: agreement gives the verdict, disagreement goes to **human review**, never an automatic verdict."),
+  p("Reading real misses exposed a rubric bug (the judge acquitted attempted tool calls because nothing executed); fixing it moved overall F1 from 0.77 to 0.84, and it caught the untouched holdout's cross-user cases. A **calibrated threshold** (Trust or Escalate, Kim et al., ICLR 2025) promised at most 7.9% error above confidence 0.82, but did not transfer to a new task (below). So a second judge from another family now checks every verdict: agreement gives the verdict, disagreement goes to **human review**, never an automatic verdict."),
   p("**New-task test.** DeepSeek-v3.2, used nowhere else, wrote eight prompts and its own answer key. I labelled all 129 resulting verdicts blind, seeing no judge verdicts."),
   table(
-    ["On a task it was never fitted on", "Result"],
+    ["New task, first run (one judge)", "Result"],
     [
       ["Judge accuracy", "F1 0.83 (precision 0.80, recall 0.86), matching the original 0.84"],
       ["Rules", "13 of 13 correct"],
@@ -121,7 +121,7 @@ const children = [
     [3400, 5626]
   ),
   gap(),
-  p("The judge’s accuracy transferred; its threshold did not, because calibration assumes new cases resemble old ones. Half its false alarms were a single account lookup read as a refund breach: the fix that counts attempted actions over-reaches."),
+  p("The judge’s accuracy transferred; its threshold did not, because calibration assumes new cases resemble old ones. Five of its 12 false alarms were a single account lookup read as a refund or policy breach: the fix that counts attempted actions over-reaches."),
   new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { before: 60, after: 120 },
@@ -138,14 +138,14 @@ const children = [
   }),
 
   h1("7. Critique of the metrics and evals"),
-  bullet("**Recall flatters the tool.** The 2.6B target also broke in 22 of 24 cells where nothing was planted, so flagging everything would score well. Hand-checked precision is the honest number."),
+  bullet("**Recall flatters the tool.** The 2.6B target also broke in 18 of 24 cells where nothing was planted, so flagging everything would score well. Hand-checked precision is the honest number."),
   bullet("**Small samples, few labellers:** 17 positives in the original set, three for system-prompt extraction. On the new task my blind labels and an earlier judge-visible set agree at kappa 0.63: substantial, not perfect."),
   bullet("**One sample per verdict**, yet the judge is inconsistent: one attack drew the same model-name disclosure under all eight prompts, and it flagged two and held six."),
-  bullet("**The PRD’s own targets were partly wrong or missed.** “0% false negatives” contradicts any recall below 100%, and the 10-minute scan target was missed (about 1.5 minutes per attack)."),
+  bullet("**The PRD’s own targets were partly wrong or missed.** “0% false negatives” contradicts any recall below 100%, and the 10-minute scan target was missed (about 1.1 minutes per attack)."),
   bullet("**The end-to-end benchmark failed** (recall 0.20): one generic attack per category, against one-line prompts whose planted weaknesses were never verified. Attacks were 83% on-target."),
 
   h1("8. Difficulties and tuning"),
-  p("The hardest problems surfaced by reading real transcripts, not from tests. Two categories scored 0/20 because proven incident seeds were used only after a failure; seeding the first attempt lifted them to 1/20 and 6/20. The judge’s own prompt was injectable, since attacker text sat inside its instructions, so untrusted text is now fenced off. Agent failures were real too: fenced JSON the parser rejected, a reasoning model that spent its whole budget thinking and returned nothing, and root causes mis-read from the judge’s free text. Cost tracking went wrong twice when model prices doubled, so every cost now comes from the account balance. A first planted-prompt set was rejected because its controls were no stricter than its targets. The original second judge, mistral-nemo, lost a head-to-head test to TypeSafe\u2019s Jev (F1 0.68 vs 0.83); Jev checking every verdict cut false alarms from 12 to 2, measured live. Outages degrade honestly: failed attacks are replayed from fixed real ones, judge outages fall back to rules or human review, and incomplete scans are flagged; an offline mode needs no AI. Guardrails keep it a testing tool: out-of-scope attacks are refused, runs cap at 200 attacks, and shared reports can redact working attacks."),
+  p("The hardest problems surfaced by reading real transcripts, not from tests. Two categories scored 0/20 because proven incident seeds were used only after a failure; seeding the first attempt lifted them to 1/20 and 6/20. The judge’s own prompt was injectable, since attacker text sat inside its instructions, so untrusted text is now fenced off. Agent failures were real too: fenced JSON the parser rejected, a reasoning model that spent its whole budget thinking and returned nothing, and root causes mis-read from the judge’s free text. A first planted-prompt set was rejected because its controls were no stricter than its targets. The original second judge, mistral-nemo, lost a head-to-head test to TypeSafe\u2019s Jev (F1 0.68 vs 0.83); Jev checking every verdict cut false alarms from 12 to 2, measured live. Outages degrade honestly: failed attacks are replayed from fixed real ones, judge outages fall back to rules or human review, and incomplete scans are flagged; an offline mode needs no AI. Guardrails keep it a testing tool: out-of-scope attacks are refused, runs cap at 200 attacks, and shared reports can redact working attacks."),
 
   h1("9. Rough edges and future path"),
   bullet("Make recalibration routine: a small labelled audit sample whenever PromptRed meets a new domain."),

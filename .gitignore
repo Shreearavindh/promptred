@@ -26,3 +26,7 @@ evals/results/judge/2026-10-03T02-24-39.466422+00-00.json
 evals/results/judge/2026-10-03T03-34-06.614323+00-00.json
 reports/promptred_scan_20261003T025052Z.html
 reports/promptred_scan_20261003T025052Z.json
+
+# Word lock files and repeat re-score summaries from local runs
+~$*
+evals/results/judge/2026-10-03T14-20-48.185807+00-00.json

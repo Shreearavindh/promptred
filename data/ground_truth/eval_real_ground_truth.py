@@ -58,14 +58,19 @@ def _load_done() -> dict[str, dict]:
 
 
 def main() -> None:
-    suite = JudgeEvalSuite(ground_truth_path=GROUND_TRUTH_PATH)
-    cases = suite.load_cases()
-
     done = _load_done()
+    total = len(load_ground_truth_cases(GROUND_TRUTH_PATH))
     print(
-        f"Resuming: {len(done)}/{len(cases)} cases already have a "
+        f"Resuming: {len(done)}/{total} cases already have a "
         "result."
     )
+
+    # Build the judge (which needs an API key) only if some case still
+    # has no saved prediction, so re-scoring works with no key at all.
+    cases = []
+    if len(done) < total:
+        suite = JudgeEvalSuite(ground_truth_path=GROUND_TRUTH_PATH)
+        cases = suite.load_cases()
 
     with OUTPUT_PATH.open("a", encoding="utf-8") as out:
         for i, case in enumerate(cases, 1):
