@@ -14,3 +14,15 @@ __pycache__/
 
 # Video script - kept local, not for the repository
 docs/VIDEO_SCRIPT.md
+
+# Local-only files, not part of the submission
+.codex-build/
+.video-review-tools/
+video-review.jpg
+docs/assets/promptred-hero-robot.png
+docs/slides/
+docs/demo/PromptRed_title_slide.pptx
+evals/results/judge/2026-10-03T02-24-39.466422+00-00.json
+evals/results/judge/2026-10-03T03-34-06.614323+00-00.json
+reports/promptred_scan_20261003T025052Z.html
+reports/promptred_scan_20261003T025052Z.json
