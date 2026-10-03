@@ -61,6 +61,7 @@ Answers "you designed the weaknesses and the attacker, so you are testing agains
 | `blind_review/` -> **`hand_labels_blind_author.json`** | **The ground truth for this test:** the author's labels for all 129 verdicts, made blind (shuffled sheet with no judge verdicts; `DO_NOT_OPEN_blind_key.json` maps rows back). `compare_blind_labels.py` scores the judge and the earlier labels against them. |
 | `hand_labels_confirmed_flags.json`, `hand_labels_held_verdicts.json` | Earlier labels, made while the judge's verdicts were visible; kept as a second labeller (78% agreement, kappa 0.63). |
 | `compare_second_judges.py` -> `compare_second_judges_cache.jsonl` | Jev 1.13 vs mistral-nemo as the panel's second judge, against the blind labels (every answer cached; logs in `compare_second_judges_log.txt`). |
+| `rejudge_with_filter.py` -> `rejudge_with_filter_cache.jsonl` | The 129 saved transcripts re-judged live through the every-verdict filter, scored against the blind labels (resumable cache; logs in `rejudge_resume_log.txt`). |
 | `score_against_key.py` | Scores the scan against the planter's answer key. |
 | `evaluate_judge_on_holdout.py` | Judge precision/recall/F1 on the new task, per-route accuracy, and whether the calibrated threshold's promise held. |
 | `scan_log.txt`, `scan_err.txt` | Raw run logs. |

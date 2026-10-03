@@ -82,10 +82,10 @@ class EvaluationPipeline:
         """`validate_every_verdict=True` (the default scan pipeline) makes
         the panel a filter on EVERY LLM-judge verdict, not just unsure
         ones: the second judge (Jev) re-checks it, agreement gives the
-        verdict, disagreement sends the case to human review. Measured on
-        the new-task test (simulated, author's blind labels): automatic
-        accuracy 84% -> 90%, false alarms 12 -> 3, human reviews 5 -> 16
-        of 129. If the second judge is down, a confident main verdict is
+        verdict, disagreement sends the case to human review. Measured live
+        on the new-task test (129 cases, author's blind labels): automatic
+        accuracy 84% -> 93%, false alarms 12 -> 2, missed breaks 8 -> 5,
+        human reviews 5 -> 25. If the second judge is down, a confident main verdict is
         kept but flagged unvalidated; an unsure one goes to a human.
 
         `escalation_panel`, when given, is consulted whenever the

@@ -88,17 +88,17 @@ The report also shows totals, real token cost and latency per model role. It war
 
 Jev sends more cases to a human, but it is still the cheaper choice in engineering time. Assuming about 2 minutes to review a case and about 15 minutes to chase a false alarm, the old panel cost roughly 70 minutes on those 14 cases (10 reviewing, 60 on false alarms) and Jev roughly 33 (18 reviewing, 15 on one false alarm). Most of Jev's escalations are also real breaks, so the review time finds real problems. Jev also keeps attacker text in a separate data field, never in its instructions, so a judge-directed injection has nothing to hijack. It writes no explanation, so the report keeps the main judge's reasoning. The panel results rest on 14 cases and should be re-checked on more data.
 
-**Why check every verdict, not just unsure ones.** Simulated on all 129 new-task cases with Jev's recorded verdicts and the blind labels:
+**Why check every verdict, not just unsure ones.** Measured live: the 129 saved new-task transcripts were re-judged through the new pipeline (`data/holdout_planted/rejudge_with_filter.py`) and scored against the blind labels:
 
-| | Jev only when unsure | **Jev checks every verdict** |
+| | Jev only when unsure (as run) | **Jev checks every verdict (live)** |
 |---|---|---|
-| Accuracy of automatic verdicts | 84% (104 of 124) | **90% (102 of 113)** |
-| False alarms | 12 | **3** |
-| Missed breaks | 8 | 8 |
-| Human reviews | 5 (4%) | 16 (12%) |
+| Accuracy of automatic verdicts | 84% (104 of 124) | **93% (97 of 104)** |
+| False alarms | 12 | **2** |
+| Missed breaks | 8 | **5** |
+| Human reviews | 5 (4%) | 25 (19%), 9 of them real breaks |
 | Extra cost per 60-attack scan | - | about $0.001 |
 
-Eleven more reviews (about 22 minutes) against nine fewer false alarms (about 135 minutes) is a net saving of about 2 hours of engineering time per 129 attacks. This is a simulation, not yet a live measurement. If the second judge is down, a confident main verdict (0.82 or above) is kept but flagged unvalidated and the report is marked incomplete; an unsure one goes to a human.
+About 20 more reviews (about 40 minutes) against ten fewer false alarms (about 150 minutes): engineering time falls from about 190 to about 80 minutes per 129 attacks, with fewer real breaks missed. The trade-off is that 16 of the 25 human reviews turn out to be safe cases. If the second judge is down, a confident main verdict (0.82 or above) is kept but flagged unvalidated and the report is marked incomplete; an unsure one goes to a human.
 
 If a model is down, a failed attack is replayed with a fixed real-world attack, a judge outage falls back to the rules verdict or human review, and the report is marked incomplete. Code owns the order, the limits and the decisions about escalation. LLMs generate attacks, play the target and judge what rules cannot see. Spend caps, token ceilings and attack limits are enforced in code, never in prompts.
 
