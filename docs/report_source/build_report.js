@@ -1,7 +1,7 @@
 const fs = require("fs");
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow,
-  TableCell, WidthType, ShadingType, AlignmentType, LevelFormat, BorderStyle,
+  TableCell, WidthType, ShadingType, AlignmentType, LevelFormat, BorderStyle, ImageRun,
 } = require("docx");
 
 const OUT = process.argv[2];
@@ -122,6 +122,20 @@ const children = [
   ),
   gap(),
   p("The judge’s accuracy transferred; its threshold did not, because calibration assumes new cases resemble old ones. Half its false alarms were a single account lookup read as a refund breach: the fix that counts attempted actions over-reaches."),
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 60, after: 120 },
+    children: [new ImageRun({
+      type: "png",
+      data: fs.readFileSync(process.env.CHART_PNG),
+      transformation: { width: 590, height: 295 },
+      altText: {
+        title: "One judge vs two judges",
+        description: "On 129 new-task cases: accuracy of automatic verdicts 84% with one judge, 93% with two; false alarms 9.3% vs 1.6% of cases; missed breaks 6.2% vs 3.9%; sent to human review 3.9% vs 19.4%.",
+        name: "Judge comparison chart",
+      },
+    })],
+  }),
 
   h1("7. Critique of the metrics and evals"),
   bullet("**Recall flatters the tool.** The 2.6B target also broke in 22 of 24 cells where nothing was planted, so flagging everything would score well. Hand-checked precision is the honest number."),
